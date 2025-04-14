@@ -1,14 +1,13 @@
 package com.example.fruitfreshdetector.ui.screens
 
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
 import android.view.ViewGroup
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.Preview
-import androidx.camera.core.TorchState
+import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
@@ -30,33 +29,36 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.airbnb.lottie.compose.*
 import com.example.fruitifyai.R
+import com.example.fruitifyai.classifier.BananaFreshnessClassifier
+import com.example.fruitifyai.classifier.FruitClassifier
+import com.example.fruitifyai.classifier.toBitmap1
+import java.util.concurrent.Executors
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun ScanScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    val freshnessClassifier = remember { BananaFreshnessClassifier(context) }
+    val fruitClassifier = remember { FruitClassifier(context) }
+
     var isFlashOn by remember { mutableStateOf(false) }
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var predictionLabel by remember { mutableStateOf<String?>(null) }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        selectedImageUri = uri
-        uri?.let {
-            Log.d("ScanScreen", "Selected image URI: $it")
-        }
+        // Optional: handle gallery input
     }
 
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.scan_animation))
 
     Scaffold(
         containerColor = Color.Black,
-        contentWindowInsets = WindowInsets(0), // ⛔ Disable default system bar padding
+        contentWindowInsets = WindowInsets(0),
         content = {
-            Box(
-                modifier = modifier.fillMaxSize()
-            ) {
+            Box(modifier = modifier.fillMaxSize()) {
                 // 📷 Camera Preview
                 AndroidView(
                     factory = { ctx ->
@@ -70,9 +72,30 @@ fun ScanScreen(modifier: Modifier = Modifier) {
                         val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
                         cameraProviderFuture.addListener({
                             val cameraProvider = cameraProviderFuture.get()
+
                             val preview = Preview.Builder().build().also {
                                 it.setSurfaceProvider(previewView.surfaceProvider)
                             }
+
+                            val imageAnalyzer = ImageAnalysis.Builder()
+                                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                                .build()
+                                .also {
+                                    it.setAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
+                                        val bitmap = imageProxy.toBitmap1()
+                                        bitmap?.let {
+                                            val fruit = fruitClassifier.predict(it)
+
+                                            if (fruit.equals("Banana", ignoreCase = true)) {
+                                                val result = freshnessClassifier.predict(it)
+                                                predictionLabel = if (result < 0.5f) "Fresh Banana 🍌" else "Rotten Banana 🤢"
+                                            } else {
+                                                predictionLabel = "Not a banana 🚫"
+                                            }
+                                        }
+                                        imageProxy.close()
+                                    }
+                                }
 
                             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
@@ -81,15 +104,14 @@ fun ScanScreen(modifier: Modifier = Modifier) {
                                 val camera = cameraProvider.bindToLifecycle(
                                     lifecycleOwner,
                                     cameraSelector,
-                                    preview
+                                    preview,
+                                    imageAnalyzer
                                 )
                                 camera.cameraControl.enableTorch(isFlashOn)
-                                camera.cameraInfo.torchState.observeForever { state ->
-                                    isFlashOn = state == TorchState.ON
-                                }
                             } catch (e: Exception) {
-                                Log.e("CameraPreview", "Camera binding failed", e)
+                                Log.e("ScanScreen", "Camera binding failed", e)
                             }
+
                         }, ContextCompat.getMainExecutor(ctx))
 
                         previewView
@@ -97,7 +119,7 @@ fun ScanScreen(modifier: Modifier = Modifier) {
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // 🎞️ Lottie animation
+                // 🎞️ Center animation
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -105,15 +127,27 @@ fun ScanScreen(modifier: Modifier = Modifier) {
                     LottieAnimation(
                         composition = composition,
                         iterations = LottieConstants.IterateForever,
-                        modifier = Modifier.size(320.dp)
+                        modifier = Modifier.size(300.dp)
                     )
                 }
 
-                // 🎛️ Bottom Buttons
+                // 📢 Result text
+                predictionLabel?.let {
+                    Text(
+                        text = "Result: $it",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 48.dp)
+                    )
+                }
+
+                // 🎛 Bottom controls
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(bottom = 16.dp), // small gap above nav bar
+                        .padding(bottom = 16.dp),
                     verticalArrangement = Arrangement.Bottom,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -124,7 +158,7 @@ fun ScanScreen(modifier: Modifier = Modifier) {
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Gallery Button
+                        // 📁 Gallery button
                         IconButton(
                             onClick = { galleryLauncher.launch("image/*") },
                             modifier = Modifier
@@ -134,17 +168,16 @@ fun ScanScreen(modifier: Modifier = Modifier) {
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
-                                contentDescription = "Upload",
+                                contentDescription = "Upload from gallery",
                                 tint = Color.White
                             )
                         }
 
-                        // Flash Toggle Button
+                        // 🔦 Flash toggle
                         IconButton(
                             onClick = {
                                 isFlashOn = !isFlashOn
-                                val cameraProvider =
-                                    ProcessCameraProvider.getInstance(context).get()
+                                val cameraProvider = ProcessCameraProvider.getInstance(context).get()
                                 cameraProvider.bindToLifecycle(
                                     lifecycleOwner,
                                     CameraSelector.DEFAULT_BACK_CAMERA
@@ -157,7 +190,7 @@ fun ScanScreen(modifier: Modifier = Modifier) {
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
-                                contentDescription = "Toggle flash",
+                                contentDescription = "Flash Toggle",
                                 tint = if (isFlashOn) Color.Yellow else Color.White
                             )
                         }

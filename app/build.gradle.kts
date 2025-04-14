@@ -70,6 +70,8 @@ dependencies {
     implementation ("org.tensorflow:tensorflow-lite:2.13.0")
     implementation ("org.tensorflow:tensorflow-lite-support:0.4.3")
     implementation ("org.tensorflow:tensorflow-lite-gpu:2.13.0") // optional for faster inference
+    implementation ("org.pytorch:pytorch_android:1.13.1") // or latest version
+    implementation ("org.pytorch:pytorch_android_torchvision:1.13.1")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
