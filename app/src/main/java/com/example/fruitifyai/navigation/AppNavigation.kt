@@ -5,6 +5,8 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.example.fruitfreshdetector.ui.screens.*
 import com.example.fruitifyai.ui.screens.HomeScreen
 
@@ -13,21 +15,53 @@ fun AppNavigation(navController: NavHostController, modifier: Modifier = Modifie
     NavHost(
         navController = navController,
         startDestination = BottomNavItem.Home.route,
-        modifier = modifier // ✅ Padding only here
+        modifier = modifier
     ) {
         composable(BottomNavItem.Home.route) {
-            HomeScreen( // ⛔ Don’t pass modifier
+            HomeScreen(
                 onScanClick = {
                     navController.navigate(BottomNavItem.Scan.route)
                 }
             )
         }
+
         composable(BottomNavItem.Scan.route) {
-            ScanScreen() // ⛔ Don’t pass modifier again
-        }
-        composable(BottomNavItem.History.route) {
-            HomeScreen() // ✅ Create this screen if not already
+            ScanScreen(onPrediction = { prediction ->
+                // Pass just the string result from Scan
+                navController.navigate("result_text/${prediction}")
+            })
         }
 
+        composable(BottomNavItem.History.route) {
+            HistoryScreen(navController = navController)
+        }
+
+        // 📌 Result route from ScanScreen using simple prediction string
+        composable(
+            route = "result_text/{prediction}",
+            arguments = listOf(
+                navArgument("prediction") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val prediction = backStackEntry.arguments?.getString("prediction") ?: "No result"
+            ResultScreen(prediction = prediction)
+        }
+
+        // 📌 Result route from HistoryScreen using individual parameters
+        composable(
+            route = "result/{fruit}-{freshness}-{confidence}",
+            arguments = listOf(
+                navArgument("fruit") { type = NavType.StringType },
+                navArgument("freshness") { type = NavType.StringType },
+                navArgument("confidence") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val fruit = backStackEntry.arguments?.getString("fruit") ?: "Unknown"
+            val freshness = backStackEntry.arguments?.getString("freshness") ?: "Unknown"
+            val confidence = backStackEntry.arguments?.getString("confidence") ?: "0.0"
+            val prediction = "$fruit is $freshness\nConfidence: $confidence%"
+
+            ResultScreen(prediction = prediction)
+        }
     }
 }

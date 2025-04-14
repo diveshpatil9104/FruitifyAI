@@ -6,9 +6,7 @@ import android.graphics.YuvImage
 import android.media.Image
 import androidx.camera.core.ImageProxy
 import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
 
-// Extension function to convert ImageProxy to Bitmap
 fun ImageProxy.toBitmap1(): Bitmap? {
     val yBuffer = planes[0].buffer
     val uBuffer = planes[1].buffer

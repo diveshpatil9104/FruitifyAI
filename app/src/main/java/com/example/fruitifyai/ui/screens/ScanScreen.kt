@@ -36,7 +36,10 @@ import java.util.concurrent.Executors
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun ScanScreen(modifier: Modifier = Modifier) {
+fun ScanScreen(
+    modifier: Modifier = Modifier,
+    onPrediction: (String) -> Unit
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -44,7 +47,7 @@ fun ScanScreen(modifier: Modifier = Modifier) {
     val fruitClassifier = remember { FruitClassifier(context) }
 
     var isFlashOn by remember { mutableStateOf(false) }
-    var predictionLabel by remember { mutableStateOf<String?>(null) }
+    var latestFrameBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -59,6 +62,7 @@ fun ScanScreen(modifier: Modifier = Modifier) {
         contentWindowInsets = WindowInsets(0),
         content = {
             Box(modifier = modifier.fillMaxSize()) {
+
                 // 📷 Camera Preview
                 AndroidView(
                     factory = { ctx ->
@@ -82,28 +86,16 @@ fun ScanScreen(modifier: Modifier = Modifier) {
                                 .build()
                                 .also {
                                     it.setAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
-                                        val bitmap = imageProxy.toBitmap1()
-                                        bitmap?.let {
-                                            val fruit = fruitClassifier.predict(it)
-
-                                            if (fruit.equals("Banana", ignoreCase = true)) {
-                                                val result = freshnessClassifier.predict(it)
-                                                predictionLabel = if (result < 0.5f) "Fresh Banana 🍌" else "Rotten Banana 🤢"
-                                            } else {
-                                                predictionLabel = "Not a banana 🚫"
-                                            }
-                                        }
+                                        latestFrameBitmap = imageProxy.toBitmap1()
                                         imageProxy.close()
                                     }
                                 }
-
-                            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
                             try {
                                 cameraProvider.unbindAll()
                                 val camera = cameraProvider.bindToLifecycle(
                                     lifecycleOwner,
-                                    cameraSelector,
+                                    CameraSelector.DEFAULT_BACK_CAMERA,
                                     preview,
                                     imageAnalyzer
                                 )
@@ -128,18 +120,6 @@ fun ScanScreen(modifier: Modifier = Modifier) {
                         composition = composition,
                         iterations = LottieConstants.IterateForever,
                         modifier = Modifier.size(300.dp)
-                    )
-                }
-
-                // 📢 Result text
-                predictionLabel?.let {
-                    Text(
-                        text = "Result: $it",
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = 48.dp)
                     )
                 }
 
@@ -194,6 +174,33 @@ fun ScanScreen(modifier: Modifier = Modifier) {
                                 tint = if (isFlashOn) Color.Yellow else Color.White
                             )
                         }
+                    }
+
+                    // 📸 Capture button
+                    IconButton(
+                        onClick = {
+                            latestFrameBitmap?.let { bitmap ->
+                                val fruit = fruitClassifier.predict(bitmap)
+
+                                if (fruit.equals("Banana", ignoreCase = true)) {
+                                    val result = freshnessClassifier.predict(bitmap)
+                                    val prediction = if (result < 0.5f) "Fresh Banana 🍌" else "Rotten Banana 🤢"
+                                    onPrediction(prediction)
+                                } else {
+                                    onPrediction("Not a banana 🚫")
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .size(70.dp)
+                            .clip(CircleShape)
+                            .background(Color.Green)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Capture Image",
+                            tint = Color.White
+                        )
                     }
                 }
             }
