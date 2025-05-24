@@ -24,6 +24,9 @@ import com.example.fruitifyai.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowCompat
 import androidx.activity.ComponentActivity
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.luminance
 
 @Composable
@@ -34,7 +37,6 @@ fun ResultScreen(
 ) {
     val safeFruitName = fruitName.ifBlank { "Unknown Fruit" }
     val displayFreshness = freshnessStatus?.takeIf { it.isNotBlank() } ?: "Not available"
-    val displayConfidence = if (confidence > 0f) "${(confidence * 100).toInt()}%" else "N/A"
     val colorScheme = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
 
@@ -58,17 +60,19 @@ fun ResultScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(
-                    bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 48.dp,
-
+                    bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 48.dp
                 )
         ) {
             // Fruit Image Header
+            val isUnknown = safeFruitName.equals("unknown", ignoreCase = true)
+
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(280.dp) // Increased height for prominence
                     .clip(RoundedCornerShape(bottomStart = 36.dp, bottomEnd = 36.dp))
-                    .background(colorScheme.primaryContainer),
+                    .background(colorScheme.primaryContainer)
+                    .padding(vertical = 16.dp), // optional spacing
                 contentAlignment = Alignment.Center
             ) {
                 Image(
@@ -76,15 +80,13 @@ fun ResultScreen(
                     contentDescription = safeFruitName,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
-                        .fillMaxWidth(0.6f)
+                        .fillMaxWidth(if (isUnknown) 0.8f else 0.6f)
                         .aspectRatio(1f)
                 )
             }
 
-            // Add spacer to push content below the image
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Ensure content is not obscured by navigation bar
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -99,64 +101,173 @@ fun ResultScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Fruit Name
                 Text(
                     text = safeFruitName,
-                    style = typography.headlineLarge,
+                    style = typography.displaySmall,
                     color = colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.ExtraBold
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // Stats Row
+                Text(
+                    text = "Freshness: $displayFreshness",
+                    style = typography.titleMedium,
+                    color = if (freshnessStatus?.contains("Fresh", true) == true)
+                        colorScheme.tertiary else colorScheme.error,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(
+                    thickness = 1.dp,
+                    color = colorScheme.onSurface.copy(alpha = 0.12f)
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    StatCard(
-                        title = "Freshness",
-                        value = displayFreshness,
-                        valueColor = if (freshnessStatus?.contains("Fresh", true) == true)
-                            colorScheme.tertiary else colorScheme.error
-                    )
-                    StatCard(
-                        title = "Confidence",
-                        value = displayConfidence,
-                        valueColor = colorScheme.onSurfaceVariant
+                    Text(
+                        text = "Confidence ",
+                        style = typography.titleLarge,
+                        color = colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                InfoCard(
-                    title = "Nutrition Facts",
-                    content = getNutritionFacts(safeFruitName),
-                    iconColor = colorScheme.primary
-                )
+                ConfidenceProgressBar(confidence)
 
                 Spacer(modifier = Modifier.height(16.dp))
-
-                InfoCard(
-                    title = "Storage Tips",
-                    content = getStorageTips(safeFruitName, freshnessStatus),
-                    iconColor = colorScheme.secondary
+                HorizontalDivider(
+                    modifier = Modifier.fillMaxWidth(),
+                    thickness = 1.dp,
+                    color = colorScheme.onSurface.copy(alpha = 0.12f)
                 )
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // Add extra content to ensure scrolling
-//                Spacer(modifier = Modifier.height(16.dp))
-//                repeat(5) {
-//                    Text(
-//                        text = "Additional Info $it",
-//                      style = typography.bodyMedium
-//                   )
-//                    Spacer(modifier = Modifier.height(8.dp))
-//                }
+                // Simple text for nutrition facts and storage tips
+                Text(
+                    text = "Nutrition Facts",
+                    style = typography.titleLarge,
+                    color = colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                val nutrition = getNutritionFacts(safeFruitName)
+                NutritionGrid(nutrition)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = "Storage Tips",
+                    style = typography.titleLarge,
+                    color = colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                StorageTipsSection(fruit = safeFruitName, freshness = freshnessStatus)
             }
         }
     }
 }
+@Composable
+fun NutritionCard(label: String, value: String, @DrawableRes iconRes: Int, modifier: Modifier = Modifier) {
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        modifier = modifier.height(165.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Image(
+                painter = painterResource(id = iconRes),
+                contentDescription = label,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(110.dp)
+                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+@Composable
+fun NutritionGrid(nutritionData: Map<String, String>) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(26.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp, bottom = 16.dp) //
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            NutritionCard("Calories", nutritionData["Protein"] ?: "-", R.drawable.calories, Modifier.weight(1f))
+            NutritionCard("Carbo-hy", nutritionData["Fat"] ?: "-", R.drawable.carbo, Modifier.weight(1f))
+            NutritionCard("sugar", nutritionData["Carbs"] ?: "-", R.drawable.sugar, Modifier.weight(1f))
 
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            NutritionCard("Protein", nutritionData["protein"] ?: "-", R.drawable.protine, Modifier.weight(1f))
+            NutritionCard("fiber", nutritionData["fiber"] ?: "-", R.drawable.fiber, Modifier.weight(1f))
+            NutritionCard("Vitamins", nutritionData["Vitamins"] ?: "-", R.drawable.fats, Modifier.weight(1f))
+
+        }
+    }
+}
+fun getNutritionFacts(fruitName: String): Map<String, String> {
+    return when (fruitName.lowercase()) {
+        "banana" -> mapOf(
+            "Protein" to "1.3g",
+            "Fats" to "0.3g",
+            "Carbs" to "27g",
+            "Vitamins" to "C, B6"
+        )
+        "apple" -> mapOf(
+            "Protein" to "0.5g",
+            "Fats" to "0.2g",
+            "Carbs" to "25g",
+            "Vitamins" to "C, K"
+        )
+        "orange" -> mapOf(
+            "Protein" to "1.2g",
+            "Fats" to "0.1g",
+            "Carbs" to "15g",
+            "Vitamins" to "C, A"
+        )
+        else -> mapOf(
+            "Protein" to "100g",
+            "Fats" to "—",
+            "Carbs" to "—",
+            "Vitamins" to "—"
+        )
+    }
+}
 // Rest of your Composables (SuccessMessage, AlertMessage, StatCard, InfoCard) remain unchanged
 @Composable
 private fun SuccessMessage() {
@@ -212,86 +323,144 @@ private fun AlertMessage() {
     }
 }
 
-@Composable
-private fun StatCard(title: String, value: String, valueColor: Color) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                color = valueColor,
-                fontWeight = FontWeight.Medium
-            )
-        }
-    }
-}
-
-@Composable
-private fun InfoCard(title: String, content: String, iconColor: Color, modifier: Modifier = Modifier) {
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = iconColor,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = content,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-    }
-}
-
 @DrawableRes
 fun getFruitImageRes(fruit: String): Int {
     return when (fruit.lowercase()) {
         "banana" -> R.drawable.bananas
         "apple" -> R.drawable.apple
         "orange" -> R.drawable.orange
-        else -> R.drawable.apple // Default fallback
+        else -> R.drawable.unknown // Default fallback
     }
 }
 
-fun getNutritionFacts(fruit: String): String {
-    return when (fruit.lowercase()) {
-        "banana" -> "• Calories: 105\n• Potassium: 422 mg\n• Vitamin B6: 0.5 mg\n• Vitamin C: 10 mg\n• Fiber: 3.1 g"
-        "apple" -> "• Calories: 95\n• Fiber: 4 g\n• Vitamin C: 14%\n• Potassium: 195 mg"
-        "orange" -> "• Calories: 62\n• Vitamin C: 70 mg\n• Fiber: 3 g\n• Folate: 10%"
-        else -> "Nutrition data not available for  Calories: 95\\n• Fiber: 4 g\\n• Vitamin C: 14%\\n• Potassium: 195 mg\\n\" +\n" +
-                "                   \"• Additional Info: Apples are excellent for heart health, aid in digestion, and are low in calories. \" +\n" +
-                "                   \"They contain antioxidants like quercetin that may reduce inflammation.\\n\" Calories: 95\n" +
-                "• Fiber: 4 g\n" +
-                "• Vitamin C: 14%\n" +
-                "• Potassium: 195 mgthis fruit."
-    }
-}
 
-fun getStorageTips(fruit: String, freshness: String?): String {
+fun getStorageTipsList(fruit: String, freshness: String?): List<String> {
     return when (fruit.lowercase()) {
         "banana" -> if (freshness?.contains("fresh", true) == true) {
-            "Keep at room temperature until ripe. Avoid refrigeration before ripening."
+            listOf(
+                "Keep at room temperature until ripe.",
+                "Avoid refrigeration before ripening.",
+                "Hang bananas to avoid bruising."
+            )
         } else {
-            "Use quickly or freeze for smoothies. Avoid keeping at room temperature too long."
+            listOf(
+                "Use overripe bananas in smoothies or baking.",
+                "Store peeled bananas in a sealed container in the freezer.",
+                "Avoid leaving overripe bananas on the counter."
+            )
         }
-        "apple" -> "Store in the fridge to keep them fresh for 2–3 weeks."
-        "orange" -> "Store in a cool place or refrigerate. Consume within a week for best taste."
-        else -> "Store in a cool, dry place. Check regularly for ripeness or spoilage."
+
+        "apple" -> listOf(
+            "Store apples in the refrigerator crisper drawer.",
+            "Keep away from strong-smelling foods to avoid odor absorption.",
+            "Wrap partially eaten apples to reduce oxidation."
+        )
+
+        "orange" -> listOf(
+            "Store at room temperature for 3–4 days.",
+            "For longer storage, refrigerate in a mesh bag.",
+            "Avoid airtight containers to prevent mold."
+        )
+
+        "grapes" -> listOf(
+            "Keep grapes unwashed in the fridge until ready to eat.",
+            "Store in a ventilated plastic bag or container.",
+            "Wash and pat dry before eating."
+        )
+
+        "watermelon" -> listOf(
+            "Store whole watermelons at room temperature.",
+            "Refrigerate once cut, covered tightly in plastic wrap.",
+            "Consume cut watermelon within 3–4 days."
+        )
+
+        "strawberry" -> listOf(
+            "Refrigerate unwashed strawberries in a breathable container.",
+            "Place a paper towel at the bottom to absorb moisture.",
+            "Consume within 3–5 days for best taste."
+        )
+
+        else -> listOf("Store in a cool, dry place. Check for ripeness or spoilage regularly.")
+    }
+}
+@Composable
+fun ConfidenceProgressBar(confidence: Float) {
+    val progress = confidence.coerceIn(0f, 1f)
+    val animatedProgress by animateFloatAsState(targetValue = progress, label = "Progress")
+
+    // Determine the gradient dynamically based on confidence
+    val gradientBrush = when {
+        progress < 0.3f -> Brush.horizontalGradient(
+            listOf(Color(0xFFE53935), Color(0xFFFF7043)) // Red shades
+        )
+        progress < 0.7f -> Brush.horizontalGradient(
+            listOf(Color(0xFFFFA000), Color(0xFFFFEB3B)) // Orange to Yellow
+        )
+        else -> Brush.horizontalGradient(
+            listOf(Color(0xFF8BC34A), Color(0xFF2E7D32)) // Light Green to Dark Green
+        )
+    }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Confidence label
+        Text(
+            text = "${(progress * 100).toInt()}%",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+        )
+
+        // Progress bar container
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(15.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(animatedProgress)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(gradientBrush)
+            )
+        }
+    }
+}
+@Composable
+fun StorageTipsSection(fruit: String, freshness: String?) {
+    val tipsList = getStorageTipsList(fruit, freshness)
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        tipsList.forEach { tip ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = tip,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
     }
 }

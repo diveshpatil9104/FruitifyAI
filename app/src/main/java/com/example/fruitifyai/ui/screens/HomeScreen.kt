@@ -13,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -47,8 +46,8 @@ fun HomeScreen(
         item {
             // 🍌 Carousel Section
             val carouselItems: List<Pair<String, Int>> = listOf(
-                Pair("Banana Facts", R.drawable.ic_launcher_foreground),
-                Pair("Healthy Tips", R.drawable.ic_launcher_foreground)
+                Pair("Banana Facts", R.drawable.banana),
+                Pair("Healthy Tips", R.drawable.healthy)
             )
 
             LazyRow(
@@ -63,7 +62,7 @@ fun HomeScreen(
                         shape = RoundedCornerShape(20.dp),
                         modifier = Modifier
                             .width(280.dp)
-                            .height(180.dp),
+                            .height(200.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.secondaryContainer
                         )
@@ -77,8 +76,8 @@ fun HomeScreen(
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(100.dp)
-                                    .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                                    .height(120.dp)
+                                    .clip(RoundedCornerShape(bottomStart = 10.dp, bottomEnd = 10.dp))
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
@@ -90,7 +89,7 @@ fun HomeScreen(
                             )
                             Text(
                                 text = if (title == "Banana Facts") "Did you know? Bananas are berries!" else "Stay hydrated, eat fruits daily.",
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                             )
