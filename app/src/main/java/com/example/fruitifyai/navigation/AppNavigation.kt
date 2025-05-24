@@ -1,12 +1,11 @@
 package com.example.fruitfreshdetector.navigation
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavHostController
+import androidx.navigation.*
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
 import com.example.fruitfreshdetector.ui.screens.*
 import com.example.fruitifyai.ui.screens.HomeScreen
 
@@ -17,6 +16,7 @@ fun AppNavigation(navController: NavHostController, modifier: Modifier = Modifie
         startDestination = BottomNavItem.Home.route,
         modifier = modifier
     ) {
+        // 🏠 Home Screen
         composable(BottomNavItem.Home.route) {
             HomeScreen(
                 onScanClick = {
@@ -25,43 +25,51 @@ fun AppNavigation(navController: NavHostController, modifier: Modifier = Modifie
             )
         }
 
+        // 📸 Scan Screen
         composable(BottomNavItem.Scan.route) {
-            ScanScreen(onPrediction = { prediction ->
-                // Pass just the string result from Scan
-                navController.navigate("result_text/${prediction}")
+            ScanScreen(onPrediction = { fruit, freshness, confidence ->
+                val encodedFruit = Uri.encode(fruit)
+                val encodedFreshness = Uri.encode(freshness ?: "") // Empty string if null
+                val confidenceStr = confidence.toString()
+
+                // Navigate using query parameters (more stable)
+                navController.navigate("result_screen?fruitName=$encodedFruit&freshness=$encodedFreshness&confidence=$confidenceStr")
             })
         }
 
+        // 📜 History Screen
         composable(BottomNavItem.History.route) {
             HistoryScreen(navController = navController)
         }
 
-        // 📌 Result route from ScanScreen using simple prediction string
+        // ✅ Result Screen with Nullable Freshness
         composable(
-            route = "result_text/{prediction}",
+            route = "result_screen?fruitName={fruitName}&freshness={freshness}&confidence={confidence}",
             arguments = listOf(
-                navArgument("prediction") { type = NavType.StringType }
+                navArgument("fruitName") {
+                    type = NavType.StringType
+                    defaultValue = "Unknown"
+                },
+                navArgument("freshness") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("confidence") {
+                    type = NavType.StringType // safer than FloatType for Uri encoding
+                }
             )
         ) { backStackEntry ->
-            val prediction = backStackEntry.arguments?.getString("prediction") ?: "No result"
-            ResultScreen(prediction = prediction)
-        }
+            val fruitName = backStackEntry.arguments?.getString("fruitName") ?: "Unknown"
+            val freshness = backStackEntry.arguments?.getString("freshness")?.takeIf { it.isNotBlank() }
+            val confidenceStr = backStackEntry.arguments?.getString("confidence") ?: "0.0"
+            val confidence = confidenceStr.toFloatOrNull() ?: 0f
 
-        // 📌 Result route from HistoryScreen using individual parameters
-        composable(
-            route = "result/{fruit}-{freshness}-{confidence}",
-            arguments = listOf(
-                navArgument("fruit") { type = NavType.StringType },
-                navArgument("freshness") { type = NavType.StringType },
-                navArgument("confidence") { type = NavType.StringType }
+            ResultScreen(
+                fruitName = fruitName,
+                freshnessStatus = freshness,
+                confidence = confidence
             )
-        ) { backStackEntry ->
-            val fruit = backStackEntry.arguments?.getString("fruit") ?: "Unknown"
-            val freshness = backStackEntry.arguments?.getString("freshness") ?: "Unknown"
-            val confidence = backStackEntry.arguments?.getString("confidence") ?: "0.0"
-            val prediction = "$fruit is $freshness\nConfidence: $confidence%"
-
-            ResultScreen(prediction = prediction)
         }
     }
 }

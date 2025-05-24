@@ -38,7 +38,7 @@ import java.util.concurrent.Executors
 @Composable
 fun ScanScreen(
     modifier: Modifier = Modifier,
-    onPrediction: (String) -> Unit
+    onPrediction: (fruitName: String, freshnessStatus: String?, confidence: Float) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -111,7 +111,7 @@ fun ScanScreen(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // 🎞️ Center animation
+                // 🎞️ Center Animation
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -123,7 +123,7 @@ fun ScanScreen(
                     )
                 }
 
-                // 🎛 Bottom controls
+                // 🎛 Bottom Controls
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -138,7 +138,7 @@ fun ScanScreen(
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // 📁 Gallery button
+                        // 📁 Gallery Button
                         IconButton(
                             onClick = { galleryLauncher.launch("image/*") },
                             modifier = Modifier
@@ -153,7 +153,7 @@ fun ScanScreen(
                             )
                         }
 
-                        // 🔦 Flash toggle
+                        // 🔦 Flash Toggle
                         IconButton(
                             onClick = {
                                 isFlashOn = !isFlashOn
@@ -176,7 +176,7 @@ fun ScanScreen(
                         }
                     }
 
-                    // 📸 Capture button
+                    // 📸 Capture Button
                     IconButton(
                         onClick = {
                             latestFrameBitmap?.let { bitmap ->
@@ -184,15 +184,14 @@ fun ScanScreen(
                                 val confidenceThreshold = 0.7f
 
                                 if (confidence < confidenceThreshold) {
-                                    onPrediction("Not a fruit 🚫")
+                                    onPrediction("Unknown", null, confidence)
                                 } else {
                                     if (fruitName.equals("Banana", ignoreCase = true)) {
                                         val freshnessScore = freshnessClassifier.predict(bitmap)
-                                        val freshnessStatus = if (freshnessScore < 0.5f) "Fresh Banana 🍌" else "Rotten Banana 🤢"
-                                        onPrediction(freshnessStatus)
+                                        val freshnessStatus = if (freshnessScore < 0.5f) "Fresh" else "Rotten"
+                                        onPrediction(fruitName, freshnessStatus, confidence)
                                     } else {
-                                        // Other fruits: no freshness detection available yet
-                                        onPrediction("$fruitName\nFreshness info currently not available")
+                                        onPrediction(fruitName, null, confidence)
                                     }
                                 }
                             }
