@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -67,7 +68,7 @@ fun ScanScreen(
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text("Scan Fruit") },
+                title = { Text("") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -153,7 +154,7 @@ fun ScanScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(bottom = 96.dp)
+                        .padding(bottom = 16.dp)
                         .navigationBarsPadding(),
                     verticalArrangement = Arrangement.Bottom,
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -174,9 +175,10 @@ fun ScanScreen(
                                 .background(Color.DarkGray)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Refresh,
+                                painter = painterResource(id = R.drawable.gallary ,  ),
                                 contentDescription = "Upload from gallery",
-                                tint = Color.White
+                                tint = Color.White,
+                                modifier = Modifier.size(26.dp)
                             )
                         }
 
@@ -192,9 +194,12 @@ fun ScanScreen(
                                 .background(Color.DarkGray)
                         ) {
                             Icon(
-                                imageVector = if (isFlashOn) Icons.Default.Person else Icons.Default.Refresh,
+                                painter = painterResource(
+                                    id = if (isFlashOn) R.drawable.flash_of else R.drawable.flash_on
+                                ),
                                 contentDescription = "Flash Toggle",
-                                tint = if (isFlashOn) Color.Yellow else Color.White
+                                tint = if (isFlashOn) Color.Yellow else Color.White,
+                                modifier = Modifier.size(24.dp) // optional: set icon size
                             )
                         }
                     }
