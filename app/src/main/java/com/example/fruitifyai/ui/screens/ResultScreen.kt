@@ -9,12 +9,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import com.example.fruitifyai.R
-
 @Composable
 fun ResultScreen(
     fruitName: String,
@@ -28,31 +29,36 @@ fun ResultScreen(
     val colorScheme = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
 
-    Scaffold { paddingValues ->
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0) // Edge-to-edge
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
+                .padding(paddingValues) // Includes bottom nav bar height
         ) {
+            // Header
             Text(
                 text = safeFruitName,
                 style = typography.headlineMedium,
                 color = colorScheme.primary,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 16.dp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Fruit Image inside a Card
-            // Fruit Image inside a Card (smaller than card)
+            // Fruit Image
             Card(
                 shape = RoundedCornerShape(46.dp),
-//                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(220.dp)
+                    .padding(horizontal = 16.dp)
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -63,8 +69,8 @@ fun ResultScreen(
                         contentDescription = safeFruitName,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
-                            .fillMaxWidth(0.6f)  // image is 50% of the card's width
-                            .aspectRatio(1f)     // keeps the image square
+                            .fillMaxWidth(0.6f)
+                            .aspectRatio(1f)
                             .clip(RoundedCornerShape(12.dp))
                     )
                 }
@@ -72,10 +78,13 @@ fun ResultScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Freshness + Confidence
             Card(
                 colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
@@ -95,30 +104,33 @@ fun ResultScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Nutrition Info
             InfoCard(
                 title = "Nutrition Facts",
                 content = getNutritionFacts(safeFruitName),
-                iconColor = colorScheme.primary
+                iconColor = colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Storage Tips
             InfoCard(
                 title = "Storage Tips",
                 content = getStorageTips(safeFruitName, freshnessStatus),
-                iconColor = colorScheme.secondary
+                iconColor = colorScheme.secondary,
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
         }
     }
 }
 
 @Composable
-private fun InfoCard(title: String, content: String, iconColor: androidx.compose.ui.graphics.Color) {
+private fun InfoCard(title: String, content: String, iconColor: Color, modifier: Modifier = Modifier) {
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-//        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -136,15 +148,13 @@ private fun InfoCard(title: String, content: String, iconColor: androidx.compose
         }
     }
 }
-
-// Returns fruit-specific image from drawable
 @DrawableRes
 fun getFruitImageRes(fruit: String): Int {
     return when (fruit.lowercase()) {
         "banana" -> R.drawable.bananas
         "apple" -> R.drawable.apple
         "orange" -> R.drawable.orange
-        else -> R.drawable.bananas // Default fallback image
+        else -> R.drawable.bananas // Default fallback
     }
 }
 

@@ -1,6 +1,7 @@
 package com.example.fruitfreshdetector.navigation
 
 import android.net.Uri
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.*
@@ -14,35 +15,43 @@ fun AppNavigation(navController: NavHostController, modifier: Modifier = Modifie
     NavHost(
         navController = navController,
         startDestination = BottomNavItem.Home.route,
-        modifier = modifier
     ) {
         // 🏠 Home Screen
         composable(BottomNavItem.Home.route) {
             HomeScreen(
+                modifier = modifier,
                 onScanClick = {
                     navController.navigate(BottomNavItem.Scan.route)
                 }
             )
         }
 
-        // 📸 Scan Screen
+        // 📸 Scan Screen — Full screen (no modifier padding)
         composable(BottomNavItem.Scan.route) {
-            ScanScreen(onPrediction = { fruit, freshness, confidence ->
-                val encodedFruit = Uri.encode(fruit)
-                val encodedFreshness = Uri.encode(freshness ?: "") // Empty string if null
-                val confidenceStr = confidence.toString()
+            ScanScreen(
+                navController = navController,
+                modifier = Modifier.fillMaxSize(), // Full edge-to-edge
+                onPrediction = { fruit, freshness, confidence ->
+                    val encodedFruit = Uri.encode(fruit)
+                    val encodedFreshness = Uri.encode(freshness ?: "")
+                    val confidenceStr = confidence.toString()
 
-                // Navigate using query parameters (more stable)
-                navController.navigate("result_screen?fruitName=$encodedFruit&freshness=$encodedFreshness&confidence=$confidenceStr")
-            })
+                    navController.navigate(
+                        "result_screen?fruitName=$encodedFruit&freshness=$encodedFreshness&confidence=$confidenceStr"
+                    )
+                }
+            )
         }
 
         // 📜 History Screen
         composable(BottomNavItem.History.route) {
-            HistoryScreen(navController = navController)
+            HistoryScreen(
+                modifier = modifier,
+                navController = navController
+            )
         }
 
-        // ✅ Result Screen with Nullable Freshness
+        // ✅ Result Screen
         composable(
             route = "result_screen?fruitName={fruitName}&freshness={freshness}&confidence={confidence}",
             arguments = listOf(
@@ -56,7 +65,7 @@ fun AppNavigation(navController: NavHostController, modifier: Modifier = Modifie
                     defaultValue = null
                 },
                 navArgument("confidence") {
-                    type = NavType.StringType // safer than FloatType for Uri encoding
+                    type = NavType.StringType
                 }
             )
         ) { backStackEntry ->
@@ -68,7 +77,8 @@ fun AppNavigation(navController: NavHostController, modifier: Modifier = Modifie
             ResultScreen(
                 fruitName = fruitName,
                 freshnessStatus = freshness,
-                confidence = confidence
+                confidence = confidence,
+//                modifier = modifier
             )
         }
     }

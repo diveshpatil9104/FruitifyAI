@@ -1,5 +1,6 @@
 package com.example.fruitfreshdetector.ui.screens
 
+import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,9 +19,12 @@ data class ScanHistoryItem(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistoryScreen(navController: NavController) {
+fun HistoryScreen(
+    navController: NavController,
+    modifier: Modifier = Modifier
+) {
     val historyItems = listOf(
-        ScanHistoryItem("Banana", "esh", 92.3f),
+        ScanHistoryItem("Banana", "Fresh", 92.3f),
         ScanHistoryItem("Banana", "Rotten", 76.1f),
         ScanHistoryItem("Apple", "Not Checked", 88.0f)
     )
@@ -31,19 +35,23 @@ fun HistoryScreen(navController: NavController) {
         },
         content = { padding ->
             LazyColumn(
-                modifier = Modifier
+                modifier = modifier
                     .fillMaxSize()
                     .padding(padding)
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 items(historyItems) { item ->
+                    val encodedFruit = Uri.encode(item.fruitName)
+                    val encodedFreshness = Uri.encode(item.freshness)
+                    val confidenceStr = item.confidence.toString()
+
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 8.dp)
                             .clickable {
                                 navController.navigate(
-                                    "result/${item.fruitName}-${item.freshness}-${item.confidence}"
+                                    "result_screen?fruitName=$encodedFruit&freshness=$encodedFreshness&confidence=$confidenceStr"
                                 )
                             },
                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)

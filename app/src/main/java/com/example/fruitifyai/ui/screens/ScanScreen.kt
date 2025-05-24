@@ -14,8 +14,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +29,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.navigation.NavController
 import com.airbnb.lottie.compose.*
 import com.example.fruitifyai.R
 import com.example.fruitifyai.classifier.BananaFreshnessClassifier
@@ -34,9 +37,11 @@ import com.example.fruitifyai.classifier.FruitClassifier
 import com.example.fruitifyai.classifier.toBitmap1
 import java.util.concurrent.Executors
 
+@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun ScanScreen(
+    navController: NavController,
     modifier: Modifier = Modifier,
     onPrediction: (fruitName: String, freshnessStatus: String?, confidence: Float) -> Unit
 ) {
@@ -48,22 +53,42 @@ fun ScanScreen(
 
     var isFlashOn by remember { mutableStateOf(false) }
     var latestFrameBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var cameraControl by remember { mutableStateOf<CameraControl?>(null) }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        // Optional: handle gallery input
+        // Optional: handle selected gallery image
     }
 
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.scan_animation))
 
     Scaffold(
-        containerColor = Color.Black,
+        containerColor = Color.Transparent,
+        topBar = {
+            TopAppBar(
+                title = { Text("Scan Fruit") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                ),
+                modifier = Modifier.statusBarsPadding()
+            )
+        },
         contentWindowInsets = WindowInsets(0),
         content = {
-            Box(modifier = modifier.fillMaxSize()) {
-
-                // 📷 Camera Preview
+            Box(
+                modifier = modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            ) {
+                // Camera Preview
                 AndroidView(
                     factory = { ctx ->
                         val previewView = PreviewView(ctx).apply {
@@ -99,7 +124,8 @@ fun ScanScreen(
                                     preview,
                                     imageAnalyzer
                                 )
-                                camera.cameraControl.enableTorch(isFlashOn)
+                                cameraControl = camera.cameraControl
+                                cameraControl?.enableTorch(isFlashOn)
                             } catch (e: Exception) {
                                 Log.e("ScanScreen", "Camera binding failed", e)
                             }
@@ -111,7 +137,7 @@ fun ScanScreen(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // 🎞️ Center Animation
+                // Scan animation in center
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -123,11 +149,12 @@ fun ScanScreen(
                     )
                 }
 
-                // 🎛 Bottom Controls
+                // Bottom controls
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(bottom = 16.dp),
+                        .padding(bottom = 96.dp)
+                        .navigationBarsPadding(),
                     verticalArrangement = Arrangement.Bottom,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -138,7 +165,7 @@ fun ScanScreen(
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // 📁 Gallery Button
+                        // Gallery button
                         IconButton(
                             onClick = { galleryLauncher.launch("image/*") },
                             modifier = Modifier
@@ -153,15 +180,11 @@ fun ScanScreen(
                             )
                         }
 
-                        // 🔦 Flash Toggle
+                        // Flash toggle
                         IconButton(
                             onClick = {
                                 isFlashOn = !isFlashOn
-                                val cameraProvider = ProcessCameraProvider.getInstance(context).get()
-                                cameraProvider.bindToLifecycle(
-                                    lifecycleOwner,
-                                    CameraSelector.DEFAULT_BACK_CAMERA
-                                )?.cameraControl?.enableTorch(isFlashOn)
+                                cameraControl?.enableTorch(isFlashOn)
                             },
                             modifier = Modifier
                                 .size(56.dp)
@@ -169,14 +192,16 @@ fun ScanScreen(
                                 .background(Color.DarkGray)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Add,
+                                imageVector = if (isFlashOn) Icons.Default.Person else Icons.Default.Refresh,
                                 contentDescription = "Flash Toggle",
                                 tint = if (isFlashOn) Color.Yellow else Color.White
                             )
                         }
                     }
 
-                    // 📸 Capture Button
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Capture button
                     IconButton(
                         onClick = {
                             latestFrameBitmap?.let { bitmap ->
@@ -202,7 +227,7 @@ fun ScanScreen(
                             .background(Color.Green)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Add,
+                            imageVector = Icons.Default.Phone,
                             contentDescription = "Capture Image",
                             tint = Color.White
                         )
