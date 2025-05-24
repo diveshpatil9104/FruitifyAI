@@ -180,14 +180,20 @@ fun ScanScreen(
                     IconButton(
                         onClick = {
                             latestFrameBitmap?.let { bitmap ->
-                                val fruit = fruitClassifier.predict(bitmap)
+                                val (fruitName, confidence) = fruitClassifier.predictWithConfidence(bitmap)
+                                val confidenceThreshold = 0.7f
 
-                                if (fruit.equals("Banana", ignoreCase = true)) {
-                                    val result = freshnessClassifier.predict(bitmap)
-                                    val prediction = if (result < 0.5f) "Fresh Banana 🍌" else "Rotten Banana 🤢"
-                                    onPrediction(prediction)
+                                if (confidence < confidenceThreshold) {
+                                    onPrediction("Not a fruit 🚫")
                                 } else {
-                                    onPrediction("Not a banana 🚫")
+                                    if (fruitName.equals("Banana", ignoreCase = true)) {
+                                        val freshnessScore = freshnessClassifier.predict(bitmap)
+                                        val freshnessStatus = if (freshnessScore < 0.5f) "Fresh Banana 🍌" else "Rotten Banana 🤢"
+                                        onPrediction(freshnessStatus)
+                                    } else {
+                                        // Other fruits: no freshness detection available yet
+                                        onPrediction("$fruitName\nFreshness info currently not available")
+                                    }
                                 }
                             }
                         },

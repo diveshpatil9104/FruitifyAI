@@ -8,7 +8,6 @@ import org.pytorch.Tensor
 import org.pytorch.torchvision.TensorImageUtils
 import java.io.File
 import java.io.FileOutputStream
-import java.io.InputStream
 
 class FruitClassifier(context: Context) {
 
@@ -25,6 +24,10 @@ class FruitClassifier(context: Context) {
     )
 
     fun predict(bitmap: Bitmap): String {
+        return predictWithConfidence(bitmap).first
+    }
+
+    fun predictWithConfidence(bitmap: Bitmap): Pair<String, Float> {
         val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 224, 224, true)
         val inputTensor = TensorImageUtils.bitmapToFloat32Tensor(
             resizedBitmap,
@@ -32,9 +35,20 @@ class FruitClassifier(context: Context) {
             TensorImageUtils.TORCHVISION_NORM_STD_RGB
         )
         val outputTensor = model.forward(IValue.from(inputTensor)).toTensor()
-        val scores = outputTensor.dataAsFloatArray
-        val maxIdx = scores.indices.maxByOrNull { scores[it] } ?: -1
-        return if (maxIdx in classNames.indices) classNames[maxIdx] else "Unknown"
+        val logits = outputTensor.dataAsFloatArray
+        val probabilities = softmax(logits)
+        val maxIdx = probabilities.indices.maxByOrNull { probabilities[it] } ?: -1
+
+        val label = if (maxIdx in classNames.indices) classNames[maxIdx] else "Unknown"
+        val confidence = if (maxIdx != -1) probabilities[maxIdx] else 0f
+        return Pair(label, confidence)
+    }
+
+    private fun softmax(logits: FloatArray): FloatArray {
+        val maxLogit = logits.maxOrNull() ?: 0f
+        val exp = logits.map { Math.exp((it - maxLogit).toDouble()) }
+        val sumExp = exp.sum()
+        return exp.map { (it / sumExp).toFloat() }.toFloatArray()
     }
 
     private fun assetFilePath(context: Context, assetName: String): String {
