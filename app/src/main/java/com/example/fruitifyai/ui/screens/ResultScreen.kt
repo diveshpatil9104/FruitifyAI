@@ -38,7 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResultScreen(
@@ -66,35 +65,37 @@ fun ResultScreen(
             android.graphics.Color.TRANSPARENT
     }
 
-    // Also update status bar icon color on composition (once)
+    // Updated DisposableEffect with FIX
     DisposableEffect(colorScheme) {
         activity?.let { act ->
             WindowCompat.setDecorFitsSystemWindows(act.window, false)
             WindowCompat.getInsetsController(act.window, act.window.decorView)
                 .isAppearanceLightStatusBars = colorScheme.background.luminance() > 0.5f
             act.window.setBackgroundDrawable(ColorDrawable(colorScheme.background.toArgb()))
-
         }
-        onDispose { }
+
+        onDispose {
+            // ✅ Restore default inset behavior
+            activity?.let { act ->
+                WindowCompat.setDecorFitsSystemWindows(act.window, true)
+            }
+        }
     }
 
-    Box(modifier = Modifier.fillMaxSize()
-        .background(colorScheme.background)
-    ) {
+    Box(modifier = Modifier.fillMaxSize().background(colorScheme.background)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 92.dp) // <-- moved here
-
+                .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 92.dp)
         ) {
             val isUnknown = safeFruitName.equals("unknown", ignoreCase = true)
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(250.dp) // Image box height
-                    .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)) // Rounded bottom corners
+                    .height(250.dp)
+                    .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
                     .background(colorScheme.primaryContainer),
                 contentAlignment = if (isUnknown) Alignment.BottomCenter else Alignment.Center
             ) {
@@ -108,17 +109,12 @@ fun ResultScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp)) // ⬅️ Minimized space after image box
-
+            Spacer(modifier = Modifier.height(12.dp))
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
-//                    .padding(
-//                        top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
-//                        bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 48.dp
-//                    )
             ) {
                 if (fruitName.lowercase() != "unknown") SuccessMessage() else AlertMessage()
 
@@ -180,7 +176,7 @@ fun ResultScreen(
             }
         }
 
-        // Back Button (always visible, respects status bar)
+        // Back Button (always visible)
         IconButton(
             onClick = onBackClick,
             modifier = Modifier
