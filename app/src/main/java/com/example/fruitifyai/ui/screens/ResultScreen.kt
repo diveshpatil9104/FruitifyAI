@@ -65,22 +65,22 @@ fun ResultScreen(
             android.graphics.Color.TRANSPARENT
     }
 
-    // Updated DisposableEffect with FIX
-    DisposableEffect(colorScheme) {
-        activity?.let { act ->
-            WindowCompat.setDecorFitsSystemWindows(act.window, false)
-            WindowCompat.getInsetsController(act.window, act.window.decorView)
-                .isAppearanceLightStatusBars = colorScheme.background.luminance() > 0.5f
-            act.window.setBackgroundDrawable(ColorDrawable(colorScheme.background.toArgb()))
-        }
-
-        onDispose {
-            // ✅ Restore default inset behavior
-            activity?.let { act ->
-                WindowCompat.setDecorFitsSystemWindows(act.window, true)
-            }
-        }
-    }
+//    Updated DisposableEffect with FIX
+//    DisposableEffect(colorScheme) {
+//        activity?.let { act ->
+//            WindowCompat.setDecorFitsSystemWindows(act.window, false)
+//            WindowCompat.getInsetsController(act.window, act.window.decorView)
+//                .isAppearanceLightStatusBars = colorScheme.background.luminance() > 0.5f
+//            act.window.setBackgroundDrawable(ColorDrawable(colorScheme.background.toArgb()))
+//        }
+//
+//        onDispose {
+//            // ✅ Restore default inset behavior
+//            activity?.let { act ->
+//                WindowCompat.setDecorFitsSystemWindows(act.window, true)
+//            }
+//        }
+//    }
 
     Box(modifier = Modifier.fillMaxSize().background(colorScheme.background)) {
         Column(

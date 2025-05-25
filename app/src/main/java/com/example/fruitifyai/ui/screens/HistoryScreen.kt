@@ -49,20 +49,19 @@ fun HistoryScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("H i s t o r y") })
+            TopAppBar(
+                title = { Text("H i s t o r y") },
+                windowInsets = TopAppBarDefaults.windowInsets // Let system bar insets be handled here
+            )
         },
-        content = { padding ->
+        content = { padding -> // padding already includes top/bottom bars
             Column(
                 modifier = modifier
                     .fillMaxSize()
-                    .padding(
-                        top = padding.calculateTopPadding(),
-                        start = 16.dp,
-                        end = 16.dp,
-                        bottom = 8.dp
-                    )
+                    .padding(padding)
+                    .padding(horizontal = 16.dp, vertical = 8.dp) // manual padding only for content
             ) {
-                // Rounded Search Bar inside a Card
+                // Search Bar
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -117,7 +116,8 @@ fun HistoryScreen(
 
                 // History List
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
                     items(filteredItems) { item ->
                         val encodedFruit = Uri.encode(item.fruitName)
