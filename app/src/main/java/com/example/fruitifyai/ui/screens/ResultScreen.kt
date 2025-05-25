@@ -52,7 +52,7 @@ fun ResultScreen(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color.Transparent, // Transparent to allow image to show through
+        containerColor = MaterialTheme.colorScheme.background, // Transparent to allow image to show through
         contentWindowInsets = WindowInsets(0, 0, 0, 0) // No insets to allow content behind system bars
     ) { paddingValues ->
         Column(
@@ -72,16 +72,19 @@ fun ResultScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(bottomStart = 36.dp, bottomEnd = 36.dp))
                     .background(colorScheme.primaryContainer)
-                    .padding(vertical = 16.dp), // optional spacing
-                contentAlignment = Alignment.Center
+                    .padding(
+                        vertical = if (isUnknown) 0.dp else 16.dp
+                    ), // Remove vertical padding when unknown
+                contentAlignment = if (isUnknown) Alignment.BottomCenter else Alignment.Center
             ) {
                 Image(
                     painter = painterResource(id = getFruitImageRes(safeFruitName)),
                     contentDescription = safeFruitName,
-                    contentScale = ContentScale.Fit,
+                    contentScale = if (isUnknown) ContentScale.FillHeight else ContentScale.Fit,
                     modifier = Modifier
-                        .fillMaxWidth(if (isUnknown) 0.8f else 0.6f)
+                        .fillMaxWidth(if (isUnknown) 1f else 0.6f)
                         .aspectRatio(1f)
+                        .padding(bottom = if (isUnknown) 0.dp else 0.dp) // optional if extra tweak needed
                 )
             }
 
