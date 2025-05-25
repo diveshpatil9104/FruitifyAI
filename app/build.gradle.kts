@@ -57,7 +57,7 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
+//    implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.compose)
 
     // ✅ CameraX Core
@@ -66,7 +66,7 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.3.0")
     implementation("androidx.camera:camera-view:1.3.0")
     implementation ("com.airbnb.android:lottie-compose:6.4.0")
-    implementation ("androidx.compose.material3:material3:1.3.0")
+    implementation ("androidx.compose.material3:material3:1.3.2")
     implementation ("org.tensorflow:tensorflow-lite:2.13.0")
     implementation ("org.tensorflow:tensorflow-lite-support:0.4.3")
     implementation ("org.tensorflow:tensorflow-lite-gpu:2.13.0") // optional for faster inference

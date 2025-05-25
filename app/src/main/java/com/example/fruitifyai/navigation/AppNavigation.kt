@@ -78,7 +78,9 @@ fun AppNavigation(navController: NavHostController, modifier: Modifier = Modifie
                 fruitName = fruitName,
                 freshnessStatus = freshness,
                 confidence = confidence,
-//                modifier = modifier
+                onBackClick = {
+                    navController.popBackStack()
+                }
             )
         }
     }

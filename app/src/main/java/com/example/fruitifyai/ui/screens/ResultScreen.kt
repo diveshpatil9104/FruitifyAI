@@ -1,5 +1,6 @@
 package com.example.fruitfreshdetector.ui.screens
 
+import android.graphics.drawable.ColorDrawable
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -24,57 +25,77 @@ import com.example.fruitifyai.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowCompat
 import androidx.activity.ComponentActivity
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResultScreen(
     fruitName: String,
     freshnessStatus: String?,
-    confidence: Float
+    confidence: Float,
+    onBackClick: () -> Unit
 ) {
     val safeFruitName = fruitName.ifBlank { "Unknown Fruit" }
     val displayFreshness = freshnessStatus?.takeIf { it.isNotBlank() } ?: "Not available"
     val colorScheme = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
 
-    // Enable edge-to-edge in the activity
+    val scrollState = rememberScrollState()
+    val showTopBar by remember { derivedStateOf { scrollState.value > 100 } }
+
     val context = LocalContext.current
-    (context as? ComponentActivity)?.let { activity ->
-        WindowCompat.setDecorFitsSystemWindows(activity.window, false)
-        activity.window.statusBarColor = android.graphics.Color.TRANSPARENT
-        // Adjust status bar icon color based on theme (light or dark)
-        WindowCompat.getInsetsController(activity.window, activity.window.decorView)
-            .isAppearanceLightStatusBars = colorScheme.background.luminance() > 0.5f
+    val activity = context as? ComponentActivity
+
+    // Dynamically update status bar color based on scroll position
+    LaunchedEffect(showTopBar) {
+        activity?.window?.statusBarColor = if (showTopBar)
+            colorScheme.surface.toArgb()
+        else
+            android.graphics.Color.TRANSPARENT
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background, // Transparent to allow image to show through
-        contentWindowInsets = WindowInsets(0, 0, 0, 0) // No insets to allow content behind system bars
-    ) { paddingValues ->
+    // Also update status bar icon color on composition (once)
+    DisposableEffect(colorScheme) {
+        activity?.let { act ->
+            WindowCompat.setDecorFitsSystemWindows(act.window, false)
+            WindowCompat.getInsetsController(act.window, act.window.decorView)
+                .isAppearanceLightStatusBars = colorScheme.background.luminance() > 0.5f
+            act.window.setBackgroundDrawable(ColorDrawable(colorScheme.background.toArgb()))
+
+        }
+        onDispose { }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()
+        .background(colorScheme.background)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(
-                    bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 48.dp
-                )
-        ) {
-            // Fruit Image Header
-            val isUnknown = safeFruitName.equals("unknown", ignoreCase = true)
+                .verticalScroll(scrollState)
+                .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 92.dp) // <-- moved here
 
+        ) {
+            val isUnknown = safeFruitName.equals("unknown", ignoreCase = true)
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(bottomStart = 36.dp, bottomEnd = 36.dp))
-                    .background(colorScheme.primaryContainer)
-                    .padding(
-                        vertical = if (isUnknown) 0.dp else 16.dp
-                    ), // Remove vertical padding when unknown
+                    .height(250.dp) // Image box height
+                    .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)) // Rounded bottom corners
+                    .background(colorScheme.primaryContainer),
                 contentAlignment = if (isUnknown) Alignment.BottomCenter else Alignment.Center
             ) {
                 Image(
@@ -82,25 +103,24 @@ fun ResultScreen(
                     contentDescription = safeFruitName,
                     contentScale = if (isUnknown) ContentScale.FillHeight else ContentScale.Fit,
                     modifier = Modifier
-                        .fillMaxWidth(if (isUnknown) 1f else 0.6f)
+                        .fillMaxWidth(if (isUnknown) 0.7f else 0.6f)
                         .aspectRatio(1f)
-                        .padding(bottom = if (isUnknown) 0.dp else 0.dp) // optional if extra tweak needed
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp)) // ⬅️ Minimized space after image box
+
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = paddingValues.calculateBottomPadding() + 32.dp)
                     .padding(horizontal = 24.dp)
+//                    .padding(
+//                        top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
+//                        bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 48.dp
+//                    )
             ) {
-                if (fruitName.lowercase() != "unknown") {
-                    SuccessMessage()
-                } else {
-                    AlertMessage()
-                }
+                if (fruitName.lowercase() != "unknown") SuccessMessage() else AlertMessage()
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -122,38 +142,23 @@ fun ResultScreen(
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider(
-                    thickness = 1.dp,
-                    color = colorScheme.onSurface.copy(alpha = 0.12f)
+                HorizontalDivider(thickness = 1.dp, color = colorScheme.onSurface.copy(alpha = 0.12f))
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Confidence",
+                    style = typography.titleLarge,
+                    color = colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "Confidence ",
-                        style = typography.titleLarge,
-                        color = colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
                 ConfidenceProgressBar(confidence)
 
                 Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(
-                    modifier = Modifier.fillMaxWidth(),
-                    thickness = 1.dp,
-                    color = colorScheme.onSurface.copy(alpha = 0.12f)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(thickness = 1.dp, color = colorScheme.onSurface.copy(alpha = 0.12f))
 
-                // Simple text for nutrition facts and storage tips
+                Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "Nutrition Facts",
                     style = typography.titleLarge,
@@ -161,12 +166,9 @@ fun ResultScreen(
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-
-                val nutrition = getNutritionFacts(safeFruitName)
-                NutritionGrid(nutrition)
+                NutritionGrid(getNutritionFacts(safeFruitName))
 
                 Spacer(modifier = Modifier.height(24.dp))
-
                 Text(
                     text = "Storage Tips",
                     style = typography.titleLarge,
@@ -176,6 +178,41 @@ fun ResultScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 StorageTipsSection(fruit = safeFruitName, freshness = freshnessStatus)
             }
+        }
+
+        // Back Button (always visible, respects status bar)
+        IconButton(
+            onClick = onBackClick,
+            modifier = Modifier
+                .statusBarsPadding()
+                .padding(start = 12.dp, top = 12.dp)
+                .align(Alignment.TopStart)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = "Back",
+                tint = colorScheme.onPrimaryContainer
+            )
+        }
+
+        // TopAppBar appears after scroll
+        AnimatedVisibility(
+            visible = showTopBar,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            TopAppBar(
+                title = { Text(text = safeFruitName, color = colorScheme.onSurface) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = colorScheme.onSurface)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = colorScheme.surface),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+            )
         }
     }
 }
