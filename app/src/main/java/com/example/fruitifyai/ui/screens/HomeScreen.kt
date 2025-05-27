@@ -36,6 +36,8 @@ import com.example.fruitifyai.viewmodel.ScanResultViewModel
 import com.example.fruitifyai.viewmodel.ScanResultViewModelFactory
 import com.example.fruitfreshdetector.navigation.BottomNavItem
 import com.example.fruitfreshdetector.ui.screens.getFruitImageRes
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun HomeScreen(
@@ -186,8 +188,7 @@ fun HomeScreen(
                     TextButton(onClick = {
                         Log.d("HomeScreen", "Navigating to History")
                         navController.navigate(BottomNavItem.History.route) {
-                            popUpTo(BottomNavItem.Home.route) {
-                                inclusive = false
+                            popUpTo(navController.graph.startDestinationId) {
                                 saveState = true
                             }
                             launchSingleTop = true
@@ -208,7 +209,7 @@ fun HomeScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 6.dp),
+                            .padding(vertical = 2.dp),
                         shape = MaterialTheme.shapes.medium,
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surface
@@ -253,7 +254,7 @@ private fun RecentScanCard(
     OutlinedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp)
+            .padding(vertical = 2.dp) // Reduced spacing
             .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -294,7 +295,22 @@ private fun RecentScanCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Text(
+                    text = "Confidence: ${(item.confidence * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Scanned: ${formatTimestamp(item.timestamp)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
+}
+
+private fun formatTimestamp(timestamp: Long): String {
+    val sdf = SimpleDateFormat("MMM dd, yyyy, hh:mm a", Locale.getDefault())
+    return sdf.format(Date(timestamp))
 }
