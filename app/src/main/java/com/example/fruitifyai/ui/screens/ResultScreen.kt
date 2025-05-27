@@ -90,7 +90,7 @@ fun ResultScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 92.dp)
+                .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 120.dp)
         ) {
             val isUnknown = safeFruitName.equals("unknown", ignoreCase = true)
 

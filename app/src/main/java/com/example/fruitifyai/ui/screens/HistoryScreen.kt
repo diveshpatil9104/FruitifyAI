@@ -2,6 +2,7 @@ package com.example.fruitfreshdetector.ui.screens
 
 import android.net.Uri
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Star
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.fruitifyai.data.DatabaseProvider
@@ -29,6 +31,7 @@ import com.example.fruitifyai.data.ScanResultEntity
 import com.example.fruitifyai.data.ScanResultRepository
 import com.example.fruitifyai.viewmodel.ScanResultViewModel
 import com.example.fruitifyai.viewmodel.ScanResultViewModelFactory
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,13 +49,20 @@ fun HistoryScreen(
     var searchQuery by remember { mutableStateOf(TextFieldValue("")) }
     var selectedFilter by remember { mutableStateOf("All") }
     val filterOptions = listOf("All", "Fresh", "Rotten", "Not Checked")
-
     val allHistoryItems by viewModel.scanResults.collectAsState(initial = emptyList())
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Count pinned items
+    val pinnedCount by remember(allHistoryItems) {
+        derivedStateOf { allHistoryItems.count { it.pinned } }
+    }
 
     val filteredItems by remember(allHistoryItems, searchQuery, selectedFilter) {
         derivedStateOf {
             allHistoryItems.filter {
-                (selectedFilter == "All" || it.freshness.equals(selectedFilter, ignoreCase = true)) &&
+                val freshness = it.freshness ?: "Not Checked"
+                (selectedFilter == "All" || freshness.equals(selectedFilter, ignoreCase = true)) &&
                         it.fruitName.contains(searchQuery.text, ignoreCase = true)
             }
         }
@@ -79,6 +89,18 @@ fun HistoryScreen(
             )
         },
         contentWindowInsets = WindowInsets(0.dp),
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    shape = RoundedCornerShape(12.dp),
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+//                    actionColor = MaterialTheme.colorScheme.primary,
+//                    tonalElevation = 6.dp
+                )
+            }
+        },
         modifier = modifier.fillMaxSize()
     ) { padding ->
         LazyColumn(
@@ -86,46 +108,54 @@ fun HistoryScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(
+                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp,
+                top = 8.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
                 SearchBar(searchQuery, onQueryChange = { searchQuery = it })
-                Spacer(modifier = Modifier.height(12.dp))
             }
+
             item {
                 FilterChips(
                     selectedFilter = selectedFilter,
                     filterOptions = filterOptions,
                     onFilterSelected = { selectedFilter = it }
                 )
-                Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // ✅ This must be INSIDE the LazyColumn scope
             items(filteredItems) { item ->
-                HistoryCard(
-                    item = item,
-                    onClick = {
-                        val encodedFruit = Uri.encode(item.fruitName)
-                        val encodedFreshness = Uri.encode(item.freshness ?: "Not Checked")
-                        val confidenceStr = item.confidence.toString()
-                        navController.navigate(
-                            "result_screen?fruitName=$encodedFruit&freshness=$encodedFreshness&confidence=$confidenceStr"
-                        )
-                    },
-                    onPinToggle = { pinned ->
-                        viewModel.updatePinned(item.id, pinned)
-                    },
-                    onDelete = {
-                        viewModel.deleteById(item.id)
-                    }
-                )
+                    HistoryCard(
+                        item = item,
+                        onClick = {
+                            val encodedFruit = Uri.encode(item.fruitName)
+                            val encodedFreshness = Uri.encode(item.freshness ?: "Not Checked")
+                            val confidenceStr = item.confidence.toString()
+                            navController.navigate(
+                                "result_screen?fruitName=$encodedFruit&freshness=$encodedFreshness&confidence=$confidenceStr"
+                            )
+                        },
+                        onPinToggle = { wantsToPin ->
+                            if (wantsToPin && pinnedCount >= 3) {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = "Only 3 pins are allowed. Please unpin an item first.",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                }
+                            } else {
+                                viewModel.updatePinned(item.id, wantsToPin)
+                            }
+                        },
+                        onDelete = { viewModel.deleteById(item.id) }
+                    )
+                }
             }
-
         }
     }
-}
+
 
 @Composable
 private fun SearchBar(
@@ -162,9 +192,7 @@ private fun SearchBar(
                     ),
                     trailingIcon = {
                         if (searchQuery.text.isNotEmpty()) {
-                            IconButton(onClick = {
-                                onQueryChange(TextFieldValue(""))
-                            }) {
+                            IconButton(onClick = { onQueryChange(TextFieldValue("")) }) {
                                 Icon(Icons.Default.Close, contentDescription = "Clear")
                             }
                         }
@@ -227,7 +255,7 @@ private fun HistoryCard(
                     painter = painterResource(id = fruitImageRes),
                     contentDescription = item.fruitName,
                     modifier = Modifier
-                        .size(69.dp)
+                        .size(74.dp)
                         .padding(end = 16.dp)
                 )
 
@@ -265,7 +293,12 @@ private fun HistoryCard(
 
                     DropdownMenu(
                         expanded = expanded,
-                        onDismissRequest = { expanded = false }
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier
+                            .background(
+                                color = MaterialTheme.colorScheme.surface,
+                                shape = RoundedCornerShape(12.dp)
+                            )
                     ) {
                         DropdownMenuItem(
                             text = { Text(if (item.pinned) "Unpin" else "Pin") },
@@ -274,6 +307,13 @@ private fun HistoryCard(
                                 onPinToggle(!item.pinned)
                             }
                         )
+
+                        Divider(
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+                            thickness = 1.dp
+                        )
+
                         DropdownMenuItem(
                             text = { Text("Delete") },
                             onClick = {
@@ -287,9 +327,10 @@ private fun HistoryCard(
 
             // 📌 Pin emoji overlay
             if (item.pinned) {
-                Text(
-                    text = "\uD83D\uDCCC", // 📌 pin emoji
-                    fontSize = 20.sp,
+                Icon(
+                    imageVector = Icons.Outlined.Star,
+                    contentDescription = "star",
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(8.dp)
