@@ -20,11 +20,11 @@ fun AppNavigation(navController: NavHostController, modifier: Modifier = Modifie
         composable(BottomNavItem.Home.route) {
             HomeScreen(
                 modifier = modifier,
-                onScanClick = {
-                    navController.navigate(BottomNavItem.Scan.route)
-                }
+                onScanClick = { navController.navigate(BottomNavItem.Scan.route) },
+                navController = navController
             )
         }
+
 
         // 📸 Scan Screen — Full screen (no modifier padding)
         composable(BottomNavItem.Scan.route) {

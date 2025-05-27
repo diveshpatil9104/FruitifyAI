@@ -1,5 +1,6 @@
 package com.example.fruitfreshdetector.navigation
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -34,6 +35,7 @@ val bottomNavItems = listOf(
 @Composable
 fun BottomNavBar(navController: NavController) {
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    Log.d("BottomNavBar", "Current route: $currentRoute")
 
     Box {
         NavigationBar(
@@ -50,8 +52,12 @@ fun BottomNavBar(navController: NavController) {
                     selected = isSelected,
                     onClick = {
                         if (!isSelected) {
+                            Log.d("BottomNavBar", "Navigating to ${item.route}")
                             navController.navigate(item.route) {
-                                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                popUpTo(BottomNavItem.Home.route) { // Explicitly pop to Home
+                                    inclusive = false // Keep Home in stack
+                                    saveState = true
+                                }
                                 launchSingleTop = true
                                 restoreState = true
                             }
@@ -62,13 +68,13 @@ fun BottomNavBar(navController: NavController) {
                             Icon(
                                 imageVector = it,
                                 contentDescription = item.label,
-                                modifier = Modifier.size(30.dp) // Increased icon size
+                                modifier = Modifier.size(30.dp)
                             )
                         } ?: item.iconDrawable?.let {
                             Icon(
                                 painter = painterResource(id = it),
                                 contentDescription = item.label,
-                                modifier = Modifier.size(30.dp), // Increased icon size
+                                modifier = Modifier.size(30.dp),
                                 tint = if (isSelected)
                                     MaterialTheme.colorScheme.primary
                                 else
@@ -82,12 +88,15 @@ fun BottomNavBar(navController: NavController) {
             }
         }
 
-        // FAB in the center for Scan
         FloatingActionButton(
             onClick = {
                 if (currentRoute != BottomNavItem.Scan.route) {
+                    Log.d("BottomNavBar", "Navigating to scan")
                     navController.navigate(BottomNavItem.Scan.route) {
-                        popUpTo(navController.graph.startDestinationId) { saveState = true }
+                        popUpTo(BottomNavItem.Home.route) {
+                            inclusive = false
+                            saveState = true
+                        }
                         launchSingleTop = true
                         restoreState = true
                     }
@@ -104,7 +113,7 @@ fun BottomNavBar(navController: NavController) {
             Icon(
                 painter = painterResource(id = R.drawable.scanner),
                 contentDescription = "Scan",
-                modifier = Modifier.size(35.dp) // Increased FAB icon size
+                modifier = Modifier.size(35.dp)
             )
         }
     }

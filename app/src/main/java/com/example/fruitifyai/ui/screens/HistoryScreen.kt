@@ -127,34 +127,34 @@ fun HistoryScreen(
             }
 
             items(filteredItems) { item ->
-                    HistoryCard(
-                        item = item,
-                        onClick = {
-                            val encodedFruit = Uri.encode(item.fruitName)
-                            val encodedFreshness = Uri.encode(item.freshness ?: "Not Checked")
-                            val confidenceStr = item.confidence.toString()
-                            navController.navigate(
-                                "result_screen?fruitName=$encodedFruit&freshness=$encodedFreshness&confidence=$confidenceStr"
-                            )
-                        },
-                        onPinToggle = { wantsToPin ->
-                            if (wantsToPin && pinnedCount >= 3) {
-                                scope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        message = "Only 3 pins are allowed. Please unpin an item first.",
-                                        duration = SnackbarDuration.Short
-                                    )
-                                }
-                            } else {
-                                viewModel.updatePinned(item.id, wantsToPin)
+                HistoryCard(
+                    item = item,
+                    onClick = {
+                        val encodedFruit = Uri.encode(item.fruitName)
+                        val encodedFreshness = Uri.encode(item.freshness ?: "Not Checked")
+                        val confidenceStr = item.confidence.toString()
+                        navController.navigate(
+                            "result_screen?fruitName=$encodedFruit&freshness=$encodedFreshness&confidence=$confidenceStr"
+                        )
+                    },
+                    onPinToggle = { wantsToPin ->
+                        if (wantsToPin && pinnedCount >= 3) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = "Only 3 pins are allowed. Please unpin an item first.",
+                                    duration = SnackbarDuration.Short
+                                )
                             }
-                        },
-                        onDelete = { viewModel.deleteById(item.id) }
-                    )
-                }
+                        } else {
+                            viewModel.updatePinned(item.id, wantsToPin)
+                        }
+                    },
+                    onDelete = { viewModel.deleteById(item.id) }
+                )
             }
         }
     }
+}
 
 
 @Composable
