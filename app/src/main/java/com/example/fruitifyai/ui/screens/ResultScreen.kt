@@ -38,6 +38,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.sp
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResultScreen(
@@ -142,7 +145,7 @@ fun ResultScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Confidence",
+                    text = "Accuracy",
                     style = typography.titleLarge,
                     color = colorScheme.primary,
                     fontWeight = FontWeight.SemiBold
@@ -163,6 +166,8 @@ fun ResultScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 NutritionGrid(getNutritionFacts(safeFruitName))
+                HorizontalDivider(thickness = 1.dp, color = colorScheme.onSurface.copy(alpha = 0.12f))
+
 
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
@@ -171,7 +176,8 @@ fun ResultScreen(
                     color = colorScheme.primary,
                     fontWeight = FontWeight.SemiBold
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+
                 StorageTipsSection(fruit = safeFruitName, freshness = freshnessStatus)
             }
         }
@@ -198,13 +204,28 @@ fun ResultScreen(
             exit = fadeOut()
         ) {
             TopAppBar(
-                title = { Text(text = safeFruitName, color = colorScheme.onSurface) },
+                title = {
+                    Text(
+                        text = safeFruitName.uppercase(), // Optional: make all caps like "H I S T O R Y"
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 3.sp // Character spacing
+                        ),
+                        color = MaterialTheme.colorScheme.primary // Match with other titles
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = colorScheme.onSurface)
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = colorScheme.surface),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
@@ -420,25 +441,27 @@ fun getStorageTipsList(fruit: String, freshness: String?): List<String> {
     }
 }
 @Composable
-fun ConfidenceProgressBar(confidence: Float) {
+fun ConfidenceProgressBar(
+    confidence: Float,
+    modifier: Modifier = Modifier,
+    barHeight: Dp = 15.dp // Add customizable height
+) {
     val progress = confidence.coerceIn(0f, 1f)
     val animatedProgress by animateFloatAsState(targetValue = progress, label = "Progress")
 
-    // Determine the gradient dynamically based on confidence
     val gradientBrush = when {
         progress < 0.3f -> Brush.horizontalGradient(
-            listOf(Color(0xFFE53935), Color(0xFFFF7043)) // Red shades
+            listOf(Color(0xFFE53935), Color(0xFFFF7043))
         )
         progress < 0.7f -> Brush.horizontalGradient(
-            listOf(Color(0xFFFFA000), Color(0xFFFFEB3B)) // Orange to Yellow
+            listOf(Color(0xFFFFA000), Color(0xFFFFEB3B))
         )
         else -> Brush.horizontalGradient(
-            listOf(Color(0xFF8BC34A), Color(0xFF2E7D32)) // Light Green to Dark Green
+            listOf(Color(0xFF8BC34A), Color(0xFF2E7D32))
         )
     }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // Confidence label
+    Column(modifier = modifier) {
         Text(
             text = "${(progress * 100).toInt()}%",
             style = MaterialTheme.typography.labelLarge,
@@ -446,11 +469,10 @@ fun ConfidenceProgressBar(confidence: Float) {
             modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
         )
 
-        // Progress bar container
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(15.dp)
+                .height(barHeight) // Use custom height
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {

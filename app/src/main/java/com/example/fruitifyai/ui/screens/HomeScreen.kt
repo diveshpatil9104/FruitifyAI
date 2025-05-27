@@ -34,12 +34,14 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Spacer(modifier = Modifier.height(24.dp))
+//            Spacer(modifier = Modifier.height(2.dp))
 
             Text(
-                text = "Welcome to FruitFresh!",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+                text = "FruitifyAI",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 3.sp // Add character spacing here
+                ),
                 color = MaterialTheme.colorScheme.primary
             )
         }
@@ -167,7 +169,7 @@ fun HomeScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.apple),
+                            painter = painterResource(id = R.drawable.bananas),
                             contentDescription = "Fruit Icon",
                             modifier = Modifier.size(40.dp),
                             tint = Color.Unspecified // ← shows original image colors
