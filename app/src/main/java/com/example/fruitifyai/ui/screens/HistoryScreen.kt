@@ -214,73 +214,86 @@ private fun HistoryCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val fruitImageRes = getFruitImageRes(item.fruitName)
-            Image(
-                painter = painterResource(id = fruitImageRes),
-                contentDescription = item.fruitName,
+        Box(modifier = Modifier.fillMaxWidth()) {
+            // Main Row Content
+            Row(
                 modifier = Modifier
-                    .size(69.dp)
-                    .padding(end = 16.dp)
-            )
-
-            Column(
-                modifier = Modifier
-                    .weight(1f)
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = item.fruitName,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    ),
-                    color = MaterialTheme.colorScheme.primary
+                val fruitImageRes = getFruitImageRes(item.fruitName)
+                Image(
+                    painter = painterResource(id = fruitImageRes),
+                    contentDescription = item.fruitName,
+                    modifier = Modifier
+                        .size(69.dp)
+                        .padding(end = 16.dp)
                 )
-                Text(
-                    text = "Freshness: ${item.freshness ?: "Not Checked"}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                ConfidenceProgressBar(
-                    confidence = item.confidence / 1f,
-                    modifier = Modifier.fillMaxWidth(),
-                    barHeight = 8.dp
-                )
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = item.fruitName,
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        ),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Freshness: ${item.freshness ?: "Not Checked"}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    ConfidenceProgressBar(
+                        confidence = item.confidence / 1f,
+                        modifier = Modifier.fillMaxWidth(),
+                        barHeight = 8.dp
+                    )
+                }
+
+                // 3-dot menu
+                Box {
+                    IconButton(onClick = { expanded = true }) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "More options"
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(if (item.pinned) "Unpin" else "Pin") },
+                            onClick = {
+                                expanded = false
+                                onPinToggle(!item.pinned)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Delete") },
+                            onClick = {
+                                expanded = false
+                                onDelete()
+                            }
+                        )
+                    }
+                }
             }
 
-            // 3-dot menu
-            Box {
-                IconButton(onClick = { expanded = true }) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "More options"
-                    )
-                }
-
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(if (item.pinned) "Unpin" else "Pin") },
-                        onClick = {
-                            expanded = false
-                            onPinToggle(!item.pinned)
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Delete") },
-                        onClick = {
-                            expanded = false
-                            onDelete()
-                        }
-                    )
-                }
+            // 📌 Pin emoji overlay
+            if (item.pinned) {
+                Text(
+                    text = "\uD83D\uDCCC", // 📌 pin emoji
+                    fontSize = 20.sp,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                )
             }
         }
     }
