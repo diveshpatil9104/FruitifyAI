@@ -14,43 +14,42 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.fruitifyai.R
-import java.util.*
-
-data class ScanHistoryItem(
-    val fruitName: String,
-    val freshness: String,
-    val confidence: Float
-)
+import com.example.fruitifyai.data.DatabaseProvider
+import com.example.fruitifyai.data.ScanResultEntity
+import com.example.fruitifyai.data.ScanResultRepository
+import com.example.fruitifyai.viewmodel.ScanResultViewModel
+import com.example.fruitifyai.viewmodel.ScanResultViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
     navController: NavController,
-    modifier: Modifier = Modifier
-) {
-    val allHistoryItems = remember {
-        listOf(
-            ScanHistoryItem("Banana", "Fresh", 97.3f),
-            ScanHistoryItem("Banana", "Rotten", 76.1f),
-            ScanHistoryItem("Apple", "Not Checked", 88.0f),
-            ScanHistoryItem("Banana", "Fresh", 80.5f),
-            ScanHistoryItem("Banana", "Fresh", 92.3f)
+    modifier: Modifier = Modifier,
+    viewModel: ScanResultViewModel = viewModel(
+        factory = ScanResultViewModelFactory(
+            ScanResultRepository(
+                DatabaseProvider.getDatabase(LocalContext.current).scanResultDao()
+            )
         )
-    }
-
+    )
+) {
     var searchQuery by remember { mutableStateOf(TextFieldValue("")) }
     var selectedFilter by remember { mutableStateOf("All") }
     val filterOptions = listOf("All", "Fresh", "Rotten", "Not Checked")
 
-    val filteredItems by remember {
+    val allHistoryItems by viewModel.scanResults.collectAsState(initial = emptyList())
+
+    val filteredItems by remember(allHistoryItems, searchQuery, selectedFilter) {
         derivedStateOf {
             allHistoryItems.filter {
                 (selectedFilter == "All" || it.freshness.equals(selectedFilter, ignoreCase = true)) &&
@@ -102,16 +101,28 @@ fun HistoryScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
+
+            // ✅ This must be INSIDE the LazyColumn scope
             items(filteredItems) { item ->
-                HistoryCard(item = item) {
-                    val encodedFruit = Uri.encode(item.fruitName)
-                    val encodedFreshness = Uri.encode(item.freshness)
-                    val confidenceStr = item.confidence.toString()
-                    navController.navigate(
-                        "result_screen?fruitName=$encodedFruit&freshness=$encodedFreshness&confidence=$confidenceStr"
-                    )
-                }
+                HistoryCard(
+                    item = item,
+                    onClick = {
+                        val encodedFruit = Uri.encode(item.fruitName)
+                        val encodedFreshness = Uri.encode(item.freshness ?: "Not Checked")
+                        val confidenceStr = item.confidence.toString()
+                        navController.navigate(
+                            "result_screen?fruitName=$encodedFruit&freshness=$encodedFreshness&confidence=$confidenceStr"
+                        )
+                    },
+                    onPinToggle = { pinned ->
+                        viewModel.updatePinned(item.id, pinned)
+                    },
+                    onDelete = {
+                        viewModel.deleteById(item.id)
+                    }
+                )
             }
+
         }
     }
 }
@@ -189,9 +200,13 @@ private fun FilterChips(
 
 @Composable
 private fun HistoryCard(
-    item: ScanHistoryItem,
-    onClick: () -> Unit
+    item: ScanResultEntity,
+    onClick: () -> Unit,
+    onPinToggle: (Boolean) -> Unit,
+    onDelete: () -> Unit
 ) {
+    var expanded by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -199,7 +214,12 @@ private fun HistoryCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Row(modifier = Modifier.padding(16.dp)) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             val fruitImageRes = getFruitImageRes(item.fruitName)
             Image(
                 painter = painterResource(id = fruitImageRes),
@@ -209,36 +229,59 @@ private fun HistoryCard(
                     .padding(end = 16.dp)
             )
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+            ) {
                 Text(
                     text = item.fruitName,
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold , letterSpacing = 1.sp
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
                     ),
                     color = MaterialTheme.colorScheme.primary
-
                 )
                 Text(
-                    text = "Freshness: ${item.freshness}",
+                    text = "Freshness: ${item.freshness ?: "Not Checked"}",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-
-                // 🔄 Reuse your existing confidence progress bar with adjusted width
                 ConfidenceProgressBar(
-                    confidence = item.confidence / 100f,
+                    confidence = item.confidence / 1f,
                     modifier = Modifier.fillMaxWidth(),
-                    barHeight = 8.dp // 👈 Smaller height for compact card UI
+                    barHeight = 8.dp
                 )
             }
+
+            // 3-dot menu
+            Box {
+                IconButton(onClick = { expanded = true }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "More options"
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(if (item.pinned) "Unpin" else "Pin") },
+                        onClick = {
+                            expanded = false
+                            onPinToggle(!item.pinned)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete") },
+                        onClick = {
+                            expanded = false
+                            onDelete()
+                        }
+                    )
+                }
+            }
         }
-    }
-}
-@Composable
-private fun getFruitImageRes1(fruitName: String): Int {
-    return when (fruitName.lowercase(Locale.ROOT)) {
-        "banana" -> R.drawable.bananas
-        "apple" -> R.drawable.apple
-        // Add more fruits here
-        else -> R.drawable.unknown // fallback image
     }
 }

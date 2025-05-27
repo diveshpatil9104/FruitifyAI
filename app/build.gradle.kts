@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    id("org.jetbrains.kotlin.kapt")
+
 }
 
 android {
@@ -48,6 +50,16 @@ android {
         }
     }
 }
+configurations.all {
+    resolutionStrategy {
+        force(
+            "org.jetbrains.kotlin:kotlin-stdlib:1.9.0",
+            "org.jetbrains.kotlin:kotlin-stdlib-common:1.9.0",
+            "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.0",
+            "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.0"
+        )
+    }
+}
 
 dependencies {
     implementation(libs.androidx.core.ktx)
@@ -67,6 +79,13 @@ dependencies {
     implementation("androidx.camera:camera-view:1.3.0")
     implementation ("com.airbnb.android:lottie-compose:6.4.0")
     implementation ("androidx.compose.material3:material3:1.3.2")
+
+
+// database
+    implementation ("androidx.room:room-runtime:2.7.1")
+    kapt ("androidx.room:room-compiler:2.7.1")
+    implementation ("androidx.room:room-ktx:2.7.1")
+
     implementation ("org.tensorflow:tensorflow-lite:2.13.0")
     implementation ("org.tensorflow:tensorflow-lite-support:0.4.3")
     implementation ("org.tensorflow:tensorflow-lite-gpu:2.13.0") // optional for faster inference

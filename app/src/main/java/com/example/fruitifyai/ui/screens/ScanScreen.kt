@@ -3,6 +3,11 @@ package com.example.fruitfreshdetector.ui.screens
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.net.Uri
+import com.example.fruitifyai.data.DatabaseProvider
+import com.example.fruitifyai.data.ScanResultEntity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import android.util.Log
 import android.view.ViewGroup
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -213,14 +218,54 @@ fun ScanScreen(
                                 val (fruitName, confidence) = fruitClassifier.predictWithConfidence(bitmap)
                                 val confidenceThreshold = 0.7f
 
+                                val db = DatabaseProvider.getDatabase(context)
+                                val dao = db.scanResultDao()
+
                                 if (confidence < confidenceThreshold) {
+                                    // Insert unknown result
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        dao.insertScanResult(
+                                            ScanResultEntity(
+                                                fruitName = "Unknown",
+                                                freshness = null,
+                                                confidence = confidence,
+                                                timestamp = System.currentTimeMillis()
+                                            )
+                                        )
+                                    }
+
                                     onPrediction("Unknown", null, confidence)
                                 } else {
                                     if (fruitName.equals("Banana", ignoreCase = true)) {
                                         val freshnessScore = freshnessClassifier.predict(bitmap)
                                         val freshnessStatus = if (freshnessScore < 0.5f) "Fresh" else "Rotten"
+
+                                        // Insert banana result
+                                        CoroutineScope(Dispatchers.IO).launch {
+                                            dao.insertScanResult(
+                                                ScanResultEntity(
+                                                    fruitName = "Banana",
+                                                    freshness = freshnessStatus,
+                                                    confidence = confidence,
+                                                    timestamp = System.currentTimeMillis()
+                                                )
+                                            )
+                                        }
+
                                         onPrediction(fruitName, freshnessStatus, confidence)
                                     } else {
+                                        // Insert non-banana fruit
+                                        CoroutineScope(Dispatchers.IO).launch {
+                                            dao.insertScanResult(
+                                                ScanResultEntity(
+                                                    fruitName = fruitName,
+                                                    freshness = null,
+                                                    confidence = confidence,
+                                                    timestamp = System.currentTimeMillis()
+                                                )
+                                            )
+                                        }
+
                                         onPrediction(fruitName, null, confidence)
                                     }
                                 }
