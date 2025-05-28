@@ -686,16 +686,16 @@ private fun ScanSummaryCard(
                     useTint = true
                 )
                 StatRow(
-                    iconRes = R.drawable.orange,
+                    iconRes = R.drawable.fresh,
                     text = "Fresh: $freshCount",
                     textColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    useTint = false
+                    useTint = true
                 )
                 StatRow(
-                    iconRes = R.drawable.apple,
+                    iconRes = R.drawable.rotten1,
                     text = "Rotten: $rottenCount",
                     textColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    useTint = false
+                    useTint = true
                 )
                 StatRow(
                     iconRes = getFruitImageRes(mostScannedFruit),
