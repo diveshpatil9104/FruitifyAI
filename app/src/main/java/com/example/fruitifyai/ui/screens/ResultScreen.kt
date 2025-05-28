@@ -281,18 +281,18 @@ fun NutritionGrid(nutritionData: Map<String, String>) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            NutritionCard("Calories", nutritionData["Protein"] ?: "-", R.drawable.calories, Modifier.weight(1f))
-            NutritionCard("Carbo-hy", nutritionData["Fat"] ?: "-", R.drawable.carbo, Modifier.weight(1f))
-            NutritionCard("sugar", nutritionData["Carbs"] ?: "-", R.drawable.sugar, Modifier.weight(1f))
+            NutritionCard("Calories", nutritionData["Calories"] ?: "-", R.drawable.calories, Modifier.weight(1f))
+            NutritionCard("Carbo-hy", nutritionData["Carbohydrates"] ?: "-", R.drawable.carbo, Modifier.weight(1f))
+            NutritionCard("sugar", nutritionData["Sugar"] ?: "-", R.drawable.sugar, Modifier.weight(1f))
 
         }
         Row(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            NutritionCard("Protein", nutritionData["protein"] ?: "-", R.drawable.protine, Modifier.weight(1f))
-            NutritionCard("fiber", nutritionData["fiber"] ?: "-", R.drawable.fiber, Modifier.weight(1f))
-            NutritionCard("Vitamins", nutritionData["Vitamins"] ?: "-", R.drawable.fats, Modifier.weight(1f))
+            NutritionCard("fiber", nutritionData["Fiber"] ?: "-", R.drawable.fiber1, Modifier.weight(1f))
+            NutritionCard("Vitamin C", nutritionData["Vitamin C"] ?: "-", R.drawable.fats, Modifier.weight(1f))
+            NutritionCard("Potassium", nutritionData["Potassium"] ?: "-", R.drawable.p, Modifier.weight(1f))
 
         }
     }
@@ -300,28 +300,93 @@ fun NutritionGrid(nutritionData: Map<String, String>) {
 fun getNutritionFacts(fruitName: String): Map<String, String> {
     return when (fruitName.lowercase()) {
         "banana" -> mapOf(
-            "Protein" to "1.3g",
-            "Fats" to "0.3g",
-            "Carbs" to "27g",
-            "Vitamins" to "C, B6"
+            "Calories" to "89 kcal",
+            "Carbohydrates" to "23 g",
+            "Sugar" to "12 g",
+            "Fiber" to "2.6 g",
+            "Vitamin C" to "8.7 mg",
+            "Potassium" to "358 mg"
+        )
+        "grapes" -> mapOf(
+            "Calories" to "69 kcal",
+            "Carbohydrates" to "18 g",
+            "Sugar" to "16 g",
+            "Fiber" to "0.9 g",
+            "Vitamin C" to "10.8 mg",
+            "Potassium" to "191 mg"
         )
         "apple" -> mapOf(
-            "Protein" to "0.5g",
-            "Fats" to "0.2g",
-            "Carbs" to "25g",
-            "Vitamins" to "C, K"
+            "Calories" to "52 kcal",
+            "Carbohydrates" to "14 g",
+            "Sugar" to "10 g",
+            "Fiber" to "2.4 g",
+            "Vitamin C" to "4.6 mg",
+            "Potassium" to "107 mg"
+        )
+        "watermelon" -> mapOf(
+            "Calories" to "30 kcal",
+            "Carbohydrates" to "8 g",
+            "Sugar" to "6 g",
+            "Fiber" to "0.4 g",
+            "Vitamin C" to "8.1 mg",
+            "Potassium" to "112 mg"
         )
         "orange" -> mapOf(
-            "Protein" to "1.2g",
-            "Fats" to "0.1g",
-            "Carbs" to "15g",
-            "Vitamins" to "C, A"
+            "Calories" to "47 kcal",
+            "Carbohydrates" to "12 g",
+            "Sugar" to "9 g",
+            "Fiber" to "2.4 g",
+            "Vitamin C" to "53.2 mg",
+            "Potassium" to "181 mg"
+        )
+        "strawberry" -> mapOf(
+            "Calories" to "33 kcal",
+            "Carbohydrates" to "8 g",
+            "Sugar" to "4.9 g",
+            "Fiber" to "2.0 g",
+            "Vitamin C" to "58.8 mg",
+            "Potassium" to "153 mg"
+        )
+        "dragon_fruit" -> mapOf(
+            "Calories" to "50 kcal",
+            "Carbohydrates" to "11 g",
+            "Sugar" to "8 g",
+            "Fiber" to "3.0 g",
+            "Vitamin C" to "3 mg",
+            "Potassium" to "190 mg"
+        )
+        "pomegranate" -> mapOf(
+            "Calories" to "83 kcal",
+            "Carbohydrates" to "19 g",
+            "Sugar" to "14 g",
+            "Fiber" to "4.0 g",
+            "Vitamin C" to "10.2 mg",
+            "Potassium" to "236 mg"
+        )
+        "mango" -> mapOf(
+            "Calories" to "60 kcal",
+            "Carbohydrates" to "15 g",
+            "Sugar" to "14 g",
+            "Fiber" to "1.6 g",
+            "Vitamin C" to "36.4 mg",
+            "Potassium" to "168 mg"
+        )
+        "pineapple" -> mapOf(
+            "Calories" to "50 kcal",
+            "Carbohydrates" to "13 g",
+            "Sugar" to "10 g",
+            "Fiber" to "1.4 g",
+            "Vitamin C" to "47.8 mg",
+            "Potassium" to "109 mg"
         )
         else -> mapOf(
-            "Protein" to "100g",
+            "Protein" to "—",
             "Fats" to "—",
-            "Carbs" to "—",
-            "Vitamins" to "—"
+            "Carbohydrates" to "—",
+            "Sugar" to "—",
+            "Fiber" to "—",
+            "Vitamin C" to "—",
+            "Potassium" to "—"
         )
     }
 }
@@ -386,10 +451,18 @@ fun getFruitImageRes(fruit: String): Int {
         "banana" -> R.drawable.bananas
         "apple" -> R.drawable.apple
         "orange" -> R.drawable.orange
+        "grapes" -> R.drawable.grapes
+        "ginger" -> R.drawable.ginger
+
+        "watermelon" -> R.drawable.watermelon
+        "strawberry" -> R.drawable.strawberry
+        "dragon_fruit" -> R.drawable.dragonfruit
+        "pomegranate" -> R.drawable.pomegranate
+        "mango" -> R.drawable.mango
+        "pineapple" -> R.drawable.pineapple
         else -> R.drawable.unknown // Default fallback
     }
 }
-
 
 fun getStorageTipsList(fruit: String, freshness: String?): List<String> {
     return when (fruit.lowercase()) {
@@ -429,6 +502,29 @@ fun getStorageTipsList(fruit: String, freshness: String?): List<String> {
             "Store whole watermelons at room temperature.",
             "Refrigerate once cut, covered tightly in plastic wrap.",
             "Consume cut watermelon within 3–4 days."
+        )
+        "dragon_fruit" -> listOf(
+            "Store dragon fruit at room temperature if uncut.",
+            "Once cut, wrap tightly and refrigerate.",
+            "Consume within 2–3 days after cutting."
+        )
+
+        "pomegranate" -> listOf(
+            "Store whole pomegranates in a cool, dry place or refrigerate.",
+            "Refrigerate arils in an airtight container.",
+            "Consume arils within 5 days for best freshness."
+        )
+
+        "mango" -> listOf(
+            "Store unripe mangoes at room temperature to ripen.",
+            "Refrigerate ripe mangoes to slow spoilage.",
+            "Keep mangoes away from direct sunlight and moisture."
+        )
+
+        "pineapple" -> listOf(
+            "Store whole pineapples at room temperature for 1–2 days.",
+            "Refrigerate cut pineapple in airtight containers.",
+            "Consume cut pineapple within 3–5 days."
         )
 
         "strawberry" -> listOf(
