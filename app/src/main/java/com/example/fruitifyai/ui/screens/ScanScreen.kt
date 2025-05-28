@@ -212,6 +212,7 @@ fun ScanScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Capture button
+                    // Capture button
                     IconButton(
                         onClick = {
                             latestFrameBitmap?.let { bitmap ->
@@ -222,18 +223,7 @@ fun ScanScreen(
                                 val dao = db.scanResultDao()
 
                                 if (confidence < confidenceThreshold) {
-                                    // Insert unknown result
-                                    CoroutineScope(Dispatchers.IO).launch {
-                                        dao.insertScanResult(
-                                            ScanResultEntity(
-                                                fruitName = "Unknown",
-                                                freshness = null,
-                                                confidence = confidence,
-                                                timestamp = System.currentTimeMillis()
-                                            )
-                                        )
-                                    }
-
+                                    // Skip storing unknown results in DB
                                     onPrediction("Unknown", null, confidence)
                                 } else {
                                     if (fruitName.equals("Banana", ignoreCase = true)) {
@@ -252,9 +242,9 @@ fun ScanScreen(
                                             )
                                         }
 
-                                        onPrediction(fruitName, freshnessStatus, confidence)
+                                        onPrediction("Banana", freshnessStatus, confidence)
                                     } else {
-                                        // Insert non-banana fruit
+                                        // Insert other known fruits (non-banana)
                                         CoroutineScope(Dispatchers.IO).launch {
                                             dao.insertScanResult(
                                                 ScanResultEntity(

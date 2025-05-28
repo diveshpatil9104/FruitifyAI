@@ -3,6 +3,7 @@ package com.example.fruitifyai.ui.screens
 import android.graphics.Paint
 import android.net.Uri
 import android.util.Log
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -30,6 +31,7 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -50,6 +52,8 @@ import com.example.fruitfreshdetector.ui.screens.getFruitImageRes
 import java.text.SimpleDateFormat
 import java.util.*
 
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
@@ -72,10 +76,10 @@ fun HomeScreen(
 
     // Analytics data
     val currentTime = System.currentTimeMillis()
-    val dayMillis = 24 * 60 * 60 * 1000L // 1 day
-    val weekMillis = 7 * dayMillis // 7 days
-    val monthMillis = 30 * dayMillis // 30 days
-    val yearMillis = 365 * dayMillis // 365 days
+    val dayMillis = 24 * 60 * 60 * 1000L
+    val weekMillis = 7 * dayMillis
+    val monthMillis = 30 * dayMillis
+    val yearMillis = 365 * dayMillis
     val calendar = Calendar.getInstance()
 
     // Daily data (for today)
@@ -131,7 +135,7 @@ fun HomeScreen(
         else -> 0L
     }
 
-    val filteredScans = allHistoryItems.filter { it.timestamp in startOfPeriod..currentTime }
+    val filteredScans = allHistoryItems.filter { it.timestamp in startOfPeriod..System.currentTimeMillis() }
 
     val totalScans = filteredScans.size
     val freshCount = filteredScans.count { it.freshness == "Fresh" }
@@ -143,7 +147,6 @@ fun HomeScreen(
 
     data class TrendEntry(val label: String, val count: Int)
 
-    // Scan trend data
     val trendEntry: List<TrendEntry> = when (selectedPeriod) {
         "Weekly" -> {
             val cal = Calendar.getInstance().apply {
@@ -154,14 +157,13 @@ fun HomeScreen(
                 set(Calendar.MILLISECOND, 0)
             }
             (0..6).map {
-                val label = SimpleDateFormat("EEE", Locale.getDefault()).format(cal.time) // e.g., Mon
+                val label = SimpleDateFormat("EEE", Locale.getDefault()).format(cal.time)
                 val start = cal.timeInMillis
                 cal.add(Calendar.DAY_OF_MONTH, 1)
                 val end = cal.timeInMillis
                 TrendEntry(label, filteredScans.count { it.timestamp in start until end })
             }
         }
-
         "Monthly" -> {
             val cal = Calendar.getInstance().apply {
                 set(Calendar.DAY_OF_MONTH, 1)
@@ -171,14 +173,13 @@ fun HomeScreen(
                 set(Calendar.MILLISECOND, 0)
             }
             (0..3).map {
-                val label = "W${it + 1}" // e.g., W1
+                val label = "W${it + 1}"
                 val start = cal.timeInMillis
                 cal.add(Calendar.WEEK_OF_MONTH, 1)
                 val end = cal.timeInMillis
                 TrendEntry(label, filteredScans.count { it.timestamp in start until end })
             }
         }
-
         "Yearly" -> {
             val cal = Calendar.getInstance().apply {
                 set(Calendar.DAY_OF_YEAR, 1)
@@ -188,17 +189,16 @@ fun HomeScreen(
                 set(Calendar.MILLISECOND, 0)
             }
             (0..11).map {
-                val label = SimpleDateFormat("MMM", Locale.getDefault()).format(cal.time) // e.g., Jan
+                val label = SimpleDateFormat("MMM", Locale.getDefault()).format(cal.time)
                 val start = cal.timeInMillis
                 cal.add(Calendar.MONTH, 1)
                 val end = cal.timeInMillis
                 TrendEntry(label, filteredScans.count { it.timestamp in start until end })
             }
         }
-
         "All" -> {
-            val minTimestamp = allHistoryItems.minOfOrNull { it.timestamp } ?: currentTime
-            val maxTimestamp = allHistoryItems.maxOfOrNull { it.timestamp } ?: currentTime
+            val minTimestamp = allHistoryItems.minOfOrNull { it.timestamp } ?: System.currentTimeMillis()
+            val maxTimestamp = allHistoryItems.maxOfOrNull { it.timestamp } ?: System.currentTimeMillis()
             val startCal = Calendar.getInstance().apply {
                 timeInMillis = minTimestamp
                 set(Calendar.DAY_OF_YEAR, 1)
@@ -208,8 +208,8 @@ fun HomeScreen(
                 set(Calendar.MILLISECOND, 0)
             }
             val trend = mutableListOf<TrendEntry>()
-            while (startCal.timeInMillis < maxTimestamp) {
-                val year = startCal.get(Calendar.YEAR).toString() // e.g., 2025
+            while (startCal.timeInMillis < maxTimestamp.toLong()) {
+                val year = startCal.get(Calendar.YEAR).toString()
                 val start = startCal.timeInMillis
                 startCal.add(Calendar.YEAR, 1)
                 val end = startCal.timeInMillis
@@ -217,37 +217,49 @@ fun HomeScreen(
             }
             trend
         }
-
         else -> emptyList()
     }
 
     val recentScans = allHistoryItems.sortedByDescending { it.timestamp }
 
     Scaffold(
-        modifier = modifier.fillMaxSize()
+        modifier = modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "FruitifyAI",
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 2.sp
+                        ),
+                        color = MaterialTheme.colorScheme.primary, // Debug: Try Color.Black if not visible
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                windowInsets = WindowInsets.statusBars.only(WindowInsetsSides.Horizontal),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        },
+        contentWindowInsets = WindowInsets(0.dp)
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .padding(padding)
-                .padding(horizontal = 16.dp),
+                .padding(
+                    top = padding.calculateTopPadding(),
+                    start = 16.dp,
+                    end = 16.dp
+                ),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(
                 bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp
             )
         ) {
-            item {
-                Text(
-                    text = "FruitifyAI",
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 3.sp
-                    ),
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
             item {
                 val carouselItems: List<Pair<String, Int>> = listOf(
                     Pair("Banana Facts", R.drawable.banana),
@@ -413,8 +425,6 @@ fun HomeScreen(
                 }
             }
 
-
-
             item {
                 Divider(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
@@ -442,7 +452,6 @@ fun HomeScreen(
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
             }
-
 
             item {
                 Row(
@@ -516,7 +525,6 @@ fun HomeScreen(
         }
     }
 }
-
 @Composable
 private fun AnalyticsSummarySection(
     trendData: List<Int>,
@@ -531,98 +539,103 @@ private fun AnalyticsSummarySection(
     timePeriods: List<String>
 ) {
     val pagerState = rememberPagerState(pageCount = { 4 })
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val cardWidth = screenWidth * 0.9f // Make cards responsive
 
-    Column(
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp),
+                .padding(bottom = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "Analytical Summary",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.SemiBold
-                ),
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(16.dp))
-
         }
+
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp)
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
             items(timePeriods) { period ->
                 FilterChip(
                     selected = selectedPeriod == period,
                     onClick = { onPeriodSelected(period) },
-                    label = { Text(period) },
-                    modifier = Modifier.padding(horizontal = 4.dp)
-
+                    label = { Text(period) }
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-
             }
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         HorizontalPager(
             state = pagerState,
-            contentPadding = PaddingValues(start = 0.dp, end = 20.dp),
-            pageSpacing = 1.dp,
+            contentPadding = PaddingValues(horizontal = 24.dp),
+            pageSpacing = 16.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp)
+                .height(250.dp)
         ) { page ->
-            when (page) {
-                0 -> ScanSummaryCard(
-                    totalScans = totalScans,
-                    freshCount = freshCount,
-                    rottenCount = rottenCount,
-                    mostScannedFruit = mostScannedFruit
-                )
-                1 -> ScanTrendCard(
-                    trendData = trendData,
-                    selectedPeriod = selectedPeriod
-                )
-                2 -> FreshRottenPieChart(
-                    freshPercent = freshPercent,
-                    rottenPercent = rottenPercent
-                )
-                3 -> FreshRottenDonutChart(
-                    freshPercent = freshPercent,
-                    rottenPercent = rottenPercent
-                )
+            Box(
+                modifier = Modifier
+                    .width(cardWidth)
+                    .fillMaxHeight()
+            ) {
+                when (page) {
+                    0 -> ScanSummaryCard(totalScans, freshCount, rottenCount, mostScannedFruit)
+                    1 -> ScanTrendCard(trendData = trendData, selectedPeriod = selectedPeriod)
+                    2 -> FreshRottenPieChart(freshPercent, rottenPercent)
+                    3 -> FreshRottenDonutChart(freshPercent, rottenPercent)
+                }
             }
         }
-        Spacer(modifier = Modifier.height(18.dp))
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        val indicatorCount = 4
+        val indicatorWidth = 12.dp
+        val indicatorHeight = 8.dp
 
         Row(
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            horizontalArrangement = Arrangement.Center
         ) {
-            repeat(4) { index ->
+            repeat(indicatorCount) { index ->
                 val isSelected = pagerState.currentPage == index
+
+                val animatedWidth by animateDpAsState(
+                    targetValue = if (isSelected) 24.dp else indicatorWidth,
+                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                    label = "indicatorWidth"
+                )
+
+                val animatedColor by animateColorAsState(
+                    targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                    animationSpec = tween(durationMillis = 300),
+                    label = "indicatorColor"
+                )
+
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 4.dp)
-                        .size(if (isSelected) 12.dp else 8.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isSelected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                        )
+                        .height(indicatorHeight)
+                        .width(animatedWidth)
+                        .clip(RoundedCornerShape(50))
+                        .background(animatedColor)
                 )
+                Spacer(modifier = Modifier.height(28.dp))
+
             }
         }
     }
 }
-
 @Composable
 private fun ScanSummaryCard(
     totalScans: Int,
