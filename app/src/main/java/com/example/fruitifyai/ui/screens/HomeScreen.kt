@@ -281,7 +281,12 @@ fun HomeScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(120.dp)
-                                        .clip(RoundedCornerShape(bottomStart = 10.dp, bottomEnd = 10.dp))
+                                        .clip(
+                                            RoundedCornerShape(
+                                                bottomStart = 10.dp,
+                                                bottomEnd = 10.dp
+                                            )
+                                        )
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
@@ -651,16 +656,25 @@ private fun ScanSummaryCard(
                 .padding(20.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.summary),
+                    contentDescription = "summary",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(24.dp)
+                )
                 Text(
                     text = "Scan Summary",
                     style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        letterSpacing = 1.sp
                     ),
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+
+            Spacer(modifier = Modifier.height(12.dp))
             }
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -711,7 +725,7 @@ private fun StatRow(
                 painter = painterResource(id = iconRes),
                 contentDescription = text,
                 tint = textColor,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(20.dp)
             )
         } else {
             Image(
@@ -726,7 +740,7 @@ private fun StatRow(
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 18.sp,
+//                fontSize = 18.sp,
                 fontWeight = FontWeight.Medium
             ),
             color = textColor
@@ -802,12 +816,13 @@ private fun ScanTrendCard(trendData: List<Int>, selectedPeriod: String) {
                         "All" -> "All-Time Scan Trend"
                         else -> "Scan Trend"
                     },
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+//                        fontSize = 20.sp,
+                        style = MaterialTheme.typography.titleMedium.copy(
+//                    fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 1.sp // Added character spacing
+                        ),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
             }
             Spacer(modifier = Modifier.height(12.dp))
             Canvas(
@@ -926,7 +941,6 @@ private fun FreshRottenPieChart(freshPercent: Int, rottenPercent: Int) {
             .hoverable(interactionSource)
             .scale(scale)
             .shadow(6.dp, RoundedCornerShape(16.dp)),
-
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
         )
@@ -937,12 +951,25 @@ private fun FreshRottenPieChart(freshPercent: Int, rottenPercent: Int) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(
-                text = "Fresh vs Rotten",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.pie), // Replace with your icon
+                    contentDescription = "Pie Chart Icon",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    text = "Fresh vs Rotten",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        letterSpacing = 1.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1002,7 +1029,6 @@ private fun FreshRottenPieChart(freshPercent: Int, rottenPercent: Int) {
                         )
                     }
                 }
-
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -1082,8 +1108,7 @@ private fun FreshRottenDonutChart(freshPercent: Int, rottenPercent: Int) {
             .hoverable(interactionSource)
             .scale(scale)
             .shadow(6.dp, RoundedCornerShape(16.dp)),
-
-    colors = CardDefaults.cardColors(
+        colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
         )
     ) {
@@ -1092,12 +1117,25 @@ private fun FreshRottenDonutChart(freshPercent: Int, rottenPercent: Int) {
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            Text(
-                text = "Freshness Breakdown",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.breakdown), // Replace with your actual icon
+                    contentDescription = "Donut Chart Icon",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    text = "Freshness Breakdown",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        letterSpacing = 1.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1133,7 +1171,6 @@ private fun FreshRottenDonutChart(freshPercent: Int, rottenPercent: Int) {
                         style = Stroke(width = strokeWidth)
                     )
                 }
-
                 Text(
                     text = "${freshPercent + rottenPercent}%",
                     style = MaterialTheme.typography.titleMedium,
