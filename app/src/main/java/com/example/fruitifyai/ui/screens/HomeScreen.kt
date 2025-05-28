@@ -76,9 +76,9 @@ fun HomeScreen(
     val weekMillis = 7 * dayMillis // 7 days
     val monthMillis = 30 * dayMillis // 30 days
     val yearMillis = 365 * dayMillis // 365 days
+    val calendar = Calendar.getInstance()
 
     // Daily data (for today)
-    val calendar = Calendar.getInstance()
     calendar.timeInMillis = currentTime
     calendar.set(Calendar.HOUR_OF_DAY, 0)
     calendar.set(Calendar.MINUTE, 0)
@@ -92,19 +92,46 @@ fun HomeScreen(
     val dailyTotalScans = dailyScans.size
     val dailyFreshCount = dailyScans.count { it.freshness == "Fresh" }
     val dailyRottenCount = dailyScans.count { it.freshness == "Rotten" }
+    val dailyMostScannedFruit = dailyScans.groupBy { it.fruitName }
+        .maxByOrNull { it.value.size }?.key ?: "None"
 
     // Time period selection state
     var selectedPeriod by remember { mutableStateOf("Weekly") }
     val timePeriods = listOf("Weekly", "Monthly", "Yearly", "All")
 
     // Filtered data based on selected period
-    val filteredScans = when (selectedPeriod) {
-        "Weekly" -> allHistoryItems.filter { it.timestamp >= currentTime - weekMillis }
-        "Monthly" -> allHistoryItems.filter { it.timestamp >= currentTime - monthMillis }
-        "Yearly" -> allHistoryItems.filter { it.timestamp >= currentTime - yearMillis }
-        "All" -> allHistoryItems
-        else -> allHistoryItems
+    calendar.timeInMillis = currentTime
+
+    val startOfPeriod = when (selectedPeriod) {
+        "Weekly" -> {
+            calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
+            calendar.set(Calendar.HOUR_OF_DAY, 0)
+            calendar.set(Calendar.MINUTE, 0)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+            calendar.timeInMillis
+        }
+        "Monthly" -> {
+            calendar.set(Calendar.DAY_OF_MONTH, 1)
+            calendar.set(Calendar.HOUR_OF_DAY, 0)
+            calendar.set(Calendar.MINUTE, 0)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+            calendar.timeInMillis
+        }
+        "Yearly" -> {
+            calendar.set(Calendar.DAY_OF_YEAR, 1)
+            calendar.set(Calendar.HOUR_OF_DAY, 0)
+            calendar.set(Calendar.MINUTE, 0)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+            calendar.timeInMillis
+        }
+        "All" -> 0L
+        else -> 0L
     }
+
+    val filteredScans = allHistoryItems.filter { it.timestamp in startOfPeriod..currentTime }
 
     val totalScans = filteredScans.size
     val freshCount = filteredScans.count { it.freshness == "Fresh" }
@@ -114,32 +141,83 @@ fun HomeScreen(
     val mostScannedFruit = filteredScans.groupBy { it.fruitName }
         .maxByOrNull { it.value.size }?.key ?: "None"
 
+    data class TrendEntry(val label: String, val count: Int)
+
     // Scan trend data
-    val trendData = when (selectedPeriod) {
-        "Weekly" -> (0..6).map { day ->
-            val startOfDay = currentTime - (day + 1) * dayMillis
-            val endOfDay = currentTime - day * dayMillis
-            filteredScans.count { it.timestamp in startOfDay..endOfDay }
-        }.reversed()
-        "Monthly" -> (0..3).map { week ->
-            val startOfWeek = currentTime - (week + 1) * weekMillis
-            val endOfWeek = currentTime - week * weekMillis
-            filteredScans.count { it.timestamp in startOfWeek..endOfWeek }
-        }.reversed()
-        "Yearly" -> (0..11).map { month ->
-            val startOfMonth = currentTime - (month + 1) * monthMillis
-            val endOfMonth = currentTime - month * monthMillis
-            filteredScans.count { it.timestamp in startOfMonth..endOfMonth }
-        }.reversed()
-        "All" -> {
-            val years = ((allHistoryItems.maxOfOrNull { it.timestamp } ?: currentTime) -
-                    (allHistoryItems.minOfOrNull { it.timestamp } ?: currentTime)) / yearMillis + 1
-            (0 until years.toInt()).map { year ->
-                val startOfYear = currentTime - (year + 1) * yearMillis
-                val endOfYear = currentTime - year * yearMillis
-                filteredScans.count { it.timestamp in startOfYear..endOfYear }
-            }.reversed()
+    val trendEntry: List<TrendEntry> = when (selectedPeriod) {
+        "Weekly" -> {
+            val cal = Calendar.getInstance().apply {
+                set(Calendar.DAY_OF_WEEK, firstDayOfWeek)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            (0..6).map {
+                val label = SimpleDateFormat("EEE", Locale.getDefault()).format(cal.time) // e.g., Mon
+                val start = cal.timeInMillis
+                cal.add(Calendar.DAY_OF_MONTH, 1)
+                val end = cal.timeInMillis
+                TrendEntry(label, filteredScans.count { it.timestamp in start until end })
+            }
         }
+
+        "Monthly" -> {
+            val cal = Calendar.getInstance().apply {
+                set(Calendar.DAY_OF_MONTH, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            (0..3).map {
+                val label = "W${it + 1}" // e.g., W1
+                val start = cal.timeInMillis
+                cal.add(Calendar.WEEK_OF_MONTH, 1)
+                val end = cal.timeInMillis
+                TrendEntry(label, filteredScans.count { it.timestamp in start until end })
+            }
+        }
+
+        "Yearly" -> {
+            val cal = Calendar.getInstance().apply {
+                set(Calendar.DAY_OF_YEAR, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            (0..11).map {
+                val label = SimpleDateFormat("MMM", Locale.getDefault()).format(cal.time) // e.g., Jan
+                val start = cal.timeInMillis
+                cal.add(Calendar.MONTH, 1)
+                val end = cal.timeInMillis
+                TrendEntry(label, filteredScans.count { it.timestamp in start until end })
+            }
+        }
+
+        "All" -> {
+            val minTimestamp = allHistoryItems.minOfOrNull { it.timestamp } ?: currentTime
+            val maxTimestamp = allHistoryItems.maxOfOrNull { it.timestamp } ?: currentTime
+            val startCal = Calendar.getInstance().apply {
+                timeInMillis = minTimestamp
+                set(Calendar.DAY_OF_YEAR, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val trend = mutableListOf<TrendEntry>()
+            while (startCal.timeInMillis < maxTimestamp) {
+                val year = startCal.get(Calendar.YEAR).toString() // e.g., 2025
+                val start = startCal.timeInMillis
+                startCal.add(Calendar.YEAR, 1)
+                val end = startCal.timeInMillis
+                trend.add(TrendEntry(year, filteredScans.count { it.timestamp in start until end }))
+            }
+            trend
+        }
+
         else -> emptyList()
     }
 
@@ -224,6 +302,78 @@ fun HomeScreen(
                     }
                 }
             }
+            item {
+                Text(
+                    text = "Today's Summary",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
+//                    colors = CardDefaults.cardColors(
+//                        containerColor = MaterialTheme.colorScheme.primaryContainer
+//                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Total Scans: $dailyTotalScans",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                text = "Fresh: $dailyFreshCount",
+                                style = MaterialTheme.typography.bodyMedium,
+//                                color = Color(0xFF4CAF50)
+                            )
+                            Text(
+                                text = "Rotten: $dailyRottenCount",
+                                style = MaterialTheme.typography.bodyMedium,
+//                                color = Color(0xFFF44336)
+                            )
+                            Text(
+                                text = "Most Scanned: $dailyMostScannedFruit",
+                                style = MaterialTheme.typography.bodyMedium,
+//                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                        VerticalDivider(
+                            modifier = Modifier
+                                .height(80.dp)
+                                .padding(horizontal = 8.dp),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+                            thickness = 1.dp
+                        )
+                        Image(
+                            painter = painterResource(id = getFruitImageRes(dailyMostScannedFruit)),
+                            contentDescription = dailyMostScannedFruit,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .size(120.dp)
+//                                .clip(CircleShape)
+                        )
+                    }
+                }
+            }
 
             item {
                 Card(
@@ -258,6 +408,8 @@ fun HomeScreen(
                 }
             }
 
+
+
             item {
                 Divider(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
@@ -267,16 +419,8 @@ fun HomeScreen(
             }
 
             item {
-                DailySummaryCard(
-                    totalScans = dailyTotalScans,
-                    freshCount = dailyFreshCount,
-                    rottenCount = dailyRottenCount
-                )
-            }
-
-            item {
                 AnalyticsSummarySection(
-                    trendData = trendData,
+                    trendData = trendEntry.map { it.count },
                     freshPercent = freshPercent,
                     rottenPercent = rottenPercent,
                     totalScans = totalScans,
@@ -287,7 +431,13 @@ fun HomeScreen(
                     onPeriodSelected = { selectedPeriod = it },
                     timePeriods = timePeriods
                 )
+                Divider(
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+                    thickness = 1.dp,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
             }
+
 
             item {
                 Row(
@@ -296,8 +446,8 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "🕓 Recent Scans",
-                        style = MaterialTheme.typography.titleMedium,
+                        text = "Recent Scans",
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -342,7 +492,7 @@ fun HomeScreen(
                     }
                 }
             } else {
-                items(recentScans.take(4)) { item ->
+                items(recentScans.take(3)) { item ->
                     RecentScanCard(
                         item = item,
                         onClick = {
@@ -358,78 +508,6 @@ fun HomeScreen(
             }
 
             item { Spacer(modifier = Modifier.height(24.dp)) }
-        }
-    }
-}
-
-@Composable
-private fun DailySummaryCard(
-    totalScans: Int,
-    freshCount: Int,
-    rottenCount: Int
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isHovered by interactionSource.collectIsHoveredAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isHovered) 1.05f else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-    )
-
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .hoverable(interactionSource)
-            .scale(scale)
-            .shadow(8.dp, RoundedCornerShape(16.dp)),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = "Today's Summary",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "Total Scans: $totalScans",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Text(
-                        text = "Fresh: $freshCount",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF4CAF50)
-                    )
-                    Text(
-                        text = "Rotten: $rottenCount",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFFF44336)
-                    )
-                }
-                Icon(
-                    painter = painterResource(R.drawable.scanner),
-                    contentDescription = "Stats Icon",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(32.dp)
-                )
-            }
         }
     }
 }
@@ -460,21 +538,37 @@ private fun AnalyticsSummarySection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "📊 Analytical Summary",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                text = "Analytical Summary",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
                 color = MaterialTheme.colorScheme.primary
             )
-            TimePeriodDropdown(
-                selectedPeriod = selectedPeriod,
-                onPeriodSelected = onPeriodSelected,
-                timePeriods = timePeriods
-            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+        }
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp)
+        ) {
+            items(timePeriods) { period ->
+                FilterChip(
+                    selected = selectedPeriod == period,
+                    onClick = { onPeriodSelected(period) },
+                    label = { Text(period) },
+                    modifier = Modifier.padding(horizontal = 4.dp)
+
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+            }
         }
 
         HorizontalPager(
             state = pagerState,
-            contentPadding = PaddingValues(start = 0.dp, end = 18.dp),
+            contentPadding = PaddingValues(start = 0.dp, end = 20.dp),
             pageSpacing = 1.dp,
             modifier = Modifier
                 .fillMaxWidth()
@@ -501,7 +595,7 @@ private fun AnalyticsSummarySection(
                 )
             }
         }
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
         Row(
             horizontalArrangement = Arrangement.Center,
@@ -523,55 +617,7 @@ private fun AnalyticsSummarySection(
         }
     }
 }
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TimePeriodDropdown(
-    selectedPeriod: String,
-    onPeriodSelected: (String) -> Unit,
-    timePeriods: List<String>
-) {
-    var expanded by remember { mutableStateOf(false) }
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
-        modifier = Modifier.width(150.dp)
-    ) {
-        TextField(
-            value = selectedPeriod,
-            onValueChange = {},
-            readOnly = true,
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-            },
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth(),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-            )
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-        ) {
-            timePeriods.forEach { period ->
-                DropdownMenuItem(
-                    text = { Text(period) },
-                    onClick = {
-                        onPeriodSelected(period)
-                        expanded = false
-                    },
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-        }
-    }
-}
 @Composable
 private fun ScanSummaryCard(
     totalScans: Int,
@@ -592,7 +638,9 @@ private fun ScanSummaryCard(
             .width(320.dp)
             .height(220.dp)
             .hoverable(interactionSource)
-            .scale(scale),
+            .scale(scale)
+            .shadow(6.dp, RoundedCornerShape(16.dp)),
+
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
         )
@@ -606,40 +654,40 @@ private fun ScanSummaryCard(
             Column {
                 Text(
                     text = "Scan Summary",
-                    style = MaterialTheme.typography.titleLarge.copy(
+                    style = MaterialTheme.typography.titleMedium.copy(
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     ),
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
-                Spacer(modifier = Modifier.height(12.dp)) // Spacing after title
+                Spacer(modifier = Modifier.height(12.dp))
             }
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 StatRow(
-                    iconRes = R.drawable.scanner, // Replace with your total scans icon
+                    iconRes = R.drawable.scanner,
                     text = "Total Scans: $totalScans",
                     textColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    useTint = true // Tint for single-color icon
+                    useTint = true
                 )
                 StatRow(
-                    iconRes = R.drawable.orange, // Replace with your fresh icon
+                    iconRes = R.drawable.orange,
                     text = "Fresh: $freshCount",
-                    textColor = MaterialTheme.colorScheme.onPrimaryContainer, // Neutral color
-                    useTint = false // No tint to preserve original colors
+                    textColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    useTint = false
                 )
                 StatRow(
-                    iconRes = R.drawable.apple, // Replace with your rotten icon
+                    iconRes = R.drawable.apple,
                     text = "Rotten: $rottenCount",
-                    textColor = MaterialTheme.colorScheme.onPrimaryContainer, // Neutral color
-                    useTint = false // No tint to preserve original colors
+                    textColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    useTint = false
                 )
                 StatRow(
-                    iconRes = getFruitImageRes(mostScannedFruit), // Fruit image as icon
+                    iconRes = getFruitImageRes(mostScannedFruit),
                     text = "Most Scanned: $mostScannedFruit",
                     textColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    useTint = false // No tint to preserve original colors
+                    useTint = false
                 )
             }
         }
@@ -662,22 +710,22 @@ private fun StatRow(
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = text,
-                tint = textColor, // Apply tint for single-color icons
+                tint = textColor,
                 modifier = Modifier.size(24.dp)
             )
         } else {
             Image(
                 painter = painterResource(id = iconRes),
                 contentDescription = text,
-                contentScale = ContentScale.Fit, // Ensure image fits
+                contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .size(24.dp)
-                    .clip(CircleShape) // Circular frame
+                    .clip(CircleShape)
             )
         }
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyLarge.copy(
+            style = MaterialTheme.typography.bodyMedium.copy(
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium
             ),
@@ -685,10 +733,11 @@ private fun StatRow(
         )
     }
 }
+
 @Composable
 private fun ScanTrendCard(trendData: List<Int>, selectedPeriod: String) {
     val maxBarHeight = 120.dp
-    val barWidth = 15.dp // Reduced to fit 12 bars
+    val barWidth = 15.dp
     val maxScans = trendData.maxOrNull()?.coerceAtLeast(1) ?: 1
     val animatedHeights = trendData.map { count ->
         animateFloatAsState(
@@ -705,7 +754,7 @@ private fun ScanTrendCard(trendData: List<Int>, selectedPeriod: String) {
     val gridColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
     val maxBarHeightPx = with(density) { maxBarHeight.toPx() }
     val barWidthPx = with(density) { barWidth.toPx() }
-    val barSpacingPx = with(density) { 8.dp.toPx() } // Adjusted spacing
+    val barSpacingPx = with(density) { 8.dp.toPx() }
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
     val scale by animateFloatAsState(
@@ -740,7 +789,7 @@ private fun ScanTrendCard(trendData: List<Int>, selectedPeriod: String) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_trend), // Replace with your trend icon
+                    painter = painterResource(R.drawable.ic_trend),
                     contentDescription = "Trend Icon",
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.size(24.dp)
@@ -753,7 +802,7 @@ private fun ScanTrendCard(trendData: List<Int>, selectedPeriod: String) {
                         "All" -> "All-Time Scan Trend"
                         else -> "Scan Trend"
                     },
-                    style = MaterialTheme.typography.titleLarge.copy(
+                    style = MaterialTheme.typography.titleMedium.copy(
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     ),
@@ -765,7 +814,7 @@ private fun ScanTrendCard(trendData: List<Int>, selectedPeriod: String) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .padding(horizontal = 16.dp) // Added padding to prevent clipping
+                    .padding(horizontal = 16.dp)
             ) {
                 val totalBarsWidth = (trendData.size * barWidthPx) + ((trendData.size - 1) * barSpacingPx)
                 val startX = (size.width - totalBarsWidth) / 2
@@ -811,15 +860,28 @@ private fun ScanTrendCard(trendData: List<Int>, selectedPeriod: String) {
                     )
                     val textPaint = Paint().apply {
                         color = android.graphics.Color.BLACK
-                        textSize = 16f // Reduced to prevent overlap
+                        textSize = 16f
                         textAlign = Paint.Align.CENTER
                     }
                     val label = when (selectedPeriod) {
-                        "Weekly" -> "D${trendData.size - index}"
-                        "Monthly" -> "W${trendData.size - index}"
-                        "Yearly" -> "M${trendData.size - index}"
-                        "All" -> "Y${trendData.size - index}"
-                        else -> "${trendData.size - index}"
+                        "Weekly" -> SimpleDateFormat("EEE", Locale.getDefault()).format(
+                            Calendar.getInstance().apply {
+                                set(Calendar.DAY_OF_WEEK, firstDayOfWeek)
+                                add(Calendar.DAY_OF_MONTH, index)
+                            }.time
+                        ) // e.g., Mon
+                        "Monthly" -> "W${index + 1}" // e.g., W1
+                        "Yearly" -> SimpleDateFormat("MMM", Locale.getDefault()).format(
+                            Calendar.getInstance().apply {
+                                set(Calendar.DAY_OF_YEAR, 1)
+                                add(Calendar.MONTH, index)
+                            }.time
+                        ) // e.g., Jan
+                        "All" -> Calendar.getInstance().apply {
+                            set(Calendar.DAY_OF_YEAR, 1)
+                            add(Calendar.YEAR, index)
+                        }.get(Calendar.YEAR).toString() // e.g., 2025
+                        else -> "${index + 1}"
                     }
                     drawContext.canvas.nativeCanvas.drawText(
                         label,
@@ -862,7 +924,9 @@ private fun FreshRottenPieChart(freshPercent: Int, rottenPercent: Int) {
             .width(320.dp)
             .height(220.dp)
             .hoverable(interactionSource)
-            .scale(scale),
+            .scale(scale)
+            .shadow(6.dp, RoundedCornerShape(16.dp)),
+
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
         )
@@ -1016,8 +1080,10 @@ private fun FreshRottenDonutChart(freshPercent: Int, rottenPercent: Int) {
             .width(320.dp)
             .height(220.dp)
             .hoverable(interactionSource)
-            .scale(scale),
-        colors = CardDefaults.cardColors(
+            .scale(scale)
+            .shadow(6.dp, RoundedCornerShape(16.dp)),
+
+    colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
         )
     ) {
