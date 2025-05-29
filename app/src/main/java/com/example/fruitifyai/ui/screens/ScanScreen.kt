@@ -15,7 +15,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -213,67 +215,65 @@ fun ScanScreen(
 
                     // Capture button
                     // Capture button
-                    IconButton(
-                        onClick = {
-                            latestFrameBitmap?.let { bitmap ->
-                                val (fruitName, confidence) = fruitClassifier.predictWithConfidence(bitmap)
-                                val confidenceThreshold = 0.7f
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp) // Increase size as needed
+                            .clip(CircleShape)
+                            .clickable {
+                                latestFrameBitmap?.let { bitmap ->
+                                    val (fruitName, confidence) = fruitClassifier.predictWithConfidence(bitmap)
+                                    val confidenceThreshold = 0.7f
 
-                                val db = DatabaseProvider.getDatabase(context)
-                                val dao = db.scanResultDao()
+                                    val db = DatabaseProvider.getDatabase(context)
+                                    val dao = db.scanResultDao()
 
-                                if (confidence < confidenceThreshold) {
-                                    // Skip storing unknown results in DB
-                                    onPrediction("Unknown", null, confidence)
-                                } else {
-                                    if (fruitName.equals("Banana", ignoreCase = true)) {
-                                        val freshnessScore = freshnessClassifier.predict(bitmap)
-                                        val freshnessStatus = if (freshnessScore < 0.5f) "Fresh" else "Rotten"
-
-                                        // Insert banana result
-                                        CoroutineScope(Dispatchers.IO).launch {
-                                            dao.insertScanResult(
-                                                ScanResultEntity(
-                                                    fruitName = "Banana",
-                                                    freshness = freshnessStatus,
-                                                    confidence = confidence,
-                                                    timestamp = System.currentTimeMillis()
-                                                )
-                                            )
-                                        }
-
-                                        onPrediction("Banana", freshnessStatus, confidence)
+                                    if (confidence < confidenceThreshold) {
+                                        // Skip storing unknown results
+                                        onPrediction("Unknown", null, confidence)
                                     } else {
-                                        // Insert other known fruits (non-banana)
-                                        CoroutineScope(Dispatchers.IO).launch {
-                                            dao.insertScanResult(
-                                                ScanResultEntity(
-                                                    fruitName = fruitName,
-                                                    freshness = null,
-                                                    confidence = confidence,
-                                                    timestamp = System.currentTimeMillis()
-                                                )
-                                            )
-                                        }
+                                        if (fruitName.equals("Banana", ignoreCase = true)) {
+                                            val freshnessScore = freshnessClassifier.predict(bitmap)
+                                            val freshnessStatus = if (freshnessScore < 0.5f) "Fresh" else "Rotten"
 
-                                        onPrediction(fruitName, null, confidence)
+                                            CoroutineScope(Dispatchers.IO).launch {
+                                                dao.insertScanResult(
+                                                    ScanResultEntity(
+                                                        fruitName = "Banana",
+                                                        freshness = freshnessStatus,
+                                                        confidence = confidence,
+                                                        timestamp = System.currentTimeMillis()
+                                                    )
+                                                )
+                                            }
+
+                                            onPrediction("Banana", freshnessStatus, confidence)
+                                        } else {
+                                            CoroutineScope(Dispatchers.IO).launch {
+                                                dao.insertScanResult(
+                                                    ScanResultEntity(
+                                                        fruitName = fruitName,
+                                                        freshness = null,
+                                                        confidence = confidence,
+                                                        timestamp = System.currentTimeMillis()
+                                                    )
+                                                )
+                                            }
+
+                                            onPrediction(fruitName, null, confidence)
+                                        }
                                     }
                                 }
                             }
-                        },
-                        modifier = Modifier
-                            .size(70.dp)
-                            .clip(CircleShape)
-                            .background(Color.Green)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Phone,
-                            contentDescription = "Capture Image",
-                            tint = Color.White
+                        Image(
+                            painter = painterResource(id = R.drawable.capture1),
+                            contentDescription = "Capture Button",
+                            modifier = Modifier.fillMaxSize()
                         )
                     }
+                    }
                 }
-            }
+
         }
     )
 }

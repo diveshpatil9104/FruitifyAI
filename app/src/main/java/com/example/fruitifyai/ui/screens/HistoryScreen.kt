@@ -132,19 +132,19 @@ fun HistoryScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 140.dp),
+                            .padding(bottom = 150.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Icon(
-                                painter = painterResource(id = R.drawable.rotten1), // use any placeholder icon here
+                                painter = painterResource(id = R.drawable.empty_box), // use any placeholder icon here
                                 contentDescription = "No History",
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f),
                                 modifier = Modifier
-                                    .size(80.dp)
-                                    .padding(bottom = 8.dp)
+                                    .size(280.dp)
+                                    .padding(bottom = 10.dp)
                             )
                             Text(
                                 text = "No scan history found",
